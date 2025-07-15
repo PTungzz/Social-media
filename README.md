@@ -1,30 +1,5 @@
 ## AE backend dùng expressjs module es6 để code nhá dùng chung nodemon để chạy server 
 
-# Diagram
-``
-+----------------+          +----------------+          +----------------+
-|     User       |          |   BlogPost     |          |  ChatMessage   |
-+----------------+          +----------------+          +----------------+
-| _id (ObjectId) |<-------+ | _id (ObjectId) |          | _id (ObjectId) |
-| username       |        | | author (FK)   |          | sender (FK)    |
-| email          |        | | content       |          | receiver (FK)  |
-| password       |        | | image         |          | content        |
-| avatar         |        | | likes (FK[])  |          | createdAt      |
-| createdAt      |        | | shares (FK[]) |          | seen           |
-+----------------+        | | createdAt     |          +----------------+
-                          | +----------------+
-                          |
-                          |
-                          |      +----------------+
-                          +----> |    Comment     |
-                                 +----------------+
-                                 | _id (ObjectId) |
-                                 | post (FK)      |
-                                 | author (FK)    |
-                                 | content        |
-                                 | createdAt      |
-                                 +----------------+
-``
 
 ---
 
