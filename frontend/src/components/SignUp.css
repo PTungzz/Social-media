@@ -1,0 +1,270 @@
+/* SignUp specific styles */
+.signup-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top Bar - giữ nguyên như Login */
+.signup-page .top-bar {
+  background-color: #ffffff;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.signup-page .logo {
+  font-size: 36px;
+  font-weight: bold;
+  color: #00d4ff;
+  margin: 0;
+}
+
+/* Main Content */
+.signup-page .main-content {
+  flex: 1;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.signup-page .login-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 50px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.signup-page .welcome-title {
+  text-align: center;
+  font-size: 22px;
+  color: #333333;
+  margin-bottom: 40px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Form Styles */
+.signup-page .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Form Row for First Name and Last Name */
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.form-group {
+  position: relative;
+  flex: 1;
+}
+
+.form-group.half-width {
+  flex: 1;
+}
+
+/* Form Labels */
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: #00d4ff;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* Input Fields */
+.signup-page .form-input {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+  outline: none;
+  background-color: #ffffff;
+}
+
+.signup-page .form-input:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.1);
+}
+
+.signup-page .form-input::placeholder {
+  color: #999999;
+}
+
+/* File Upload Styling */
+.file-upload {
+  border: 2px dashed #00d4ff !important;
+  background-color: #fafcff !important;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-upload:hover {
+  background-color: #f0f9ff !important;
+  border-color: #00b8e6 !important;
+}
+
+.file-upload input[type="file"] {
+  display: none;
+}
+
+.file-upload-label {
+  color: #00d4ff;
+  font-size: 14px;
+  cursor: pointer;
+  display: block;
+}
+
+/* File Selected Display */
+.file-selected {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f6fcff;
+  border: 1px dashed #00d4ff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #00b8e6;
+}
+
+.file-selected .edit-icon {
+  cursor: pointer;
+  color: #009ac7;
+  font-size: 16px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.file-selected .edit-icon:hover {
+  background-color: #e6f7ff;
+}
+
+/* Register Button */
+.signup-page .login-button {
+  width: 100%;
+  padding: 18px;
+  background-color: #00d4ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+}
+
+.signup-page .login-button:hover {
+  background-color: #00b8e6;
+}
+
+.signup-page .login-button:active {
+  background-color: #009ac7;
+}
+
+/* Switch Mode Link */
+.signup-page .switch-mode {
+  text-align: center;
+  margin-top: 25px;
+}
+
+.signup-page .switch-link {
+  color: #00d4ff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.signup-page .switch-link:hover {
+  color: #00b8e6;
+}
+
+/* Error Message */
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Success Message */
+.success-message {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .signup-page .main-content {
+    padding: 20px 15px;
+  }
+  
+  .signup-page .login-container {
+    padding: 35px 30px;
+    max-width: 450px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .signup-page .welcome-title {
+    font-size: 20px;
+  }
+  
+  .signup-page .logo {
+    font-size: 32px;
+  }
+  
+  .signup-page .top-bar {
+    height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signup-page .login-container {
+    padding: 30px 25px;
+    max-width: 400px;
+  }
+  
+  .signup-page .welcome-title {
+    font-size: 18px;
+  }
+  
+  .signup-page .logo {
+    font-size: 28px;
+  }
+  
+  .signup-page .top-bar {
+    height: 80px;
+  }
+}

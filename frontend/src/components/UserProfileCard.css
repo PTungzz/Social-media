@@ -1,0 +1,294 @@
+/* UserProfileCard Styles */
+.user-profile-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.dark-mode .user-profile-card {
+  background-color: #2d2d2d;
+}
+
+/* Profile Header */
+.profile-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.profile-avatar {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  background-color: #00d4ff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333333;
+  margin: 0 0 4px 0;
+}
+
+.profile-friends {
+  font-size: 14px;
+  color: #666666;
+  margin: 0;
+}
+
+.dark-mode .profile-name {
+  color: #ffffff;
+}
+
+.dark-mode .profile-friends {
+  color: #cccccc;
+}
+
+.profile-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  color: #666666;
+  transition: all 0.3s ease;
+}
+
+.profile-menu-btn:hover {
+  background-color: #f0f0f0;
+  color: #00d4ff;
+}
+
+.dark-mode .profile-menu-btn {
+  color: #cccccc;
+}
+
+.dark-mode .profile-menu-btn:hover {
+  background-color: #404040;
+  color: #00d4ff;
+}
+
+/* Profile Details */
+.profile-details {
+  padding: 0 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #666666;
+  font-size: 14px;
+}
+
+.detail-item svg {
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.dark-mode .detail-item {
+  color: #cccccc;
+}
+
+.dark-mode .detail-item svg {
+  color: #999999;
+}
+
+/* Profile Divider */
+.profile-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 0 20px;
+}
+
+.dark-mode .profile-divider {
+  background-color: #404040;
+}
+
+/* Profile Stats */
+.profile-stats {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666666;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.dark-mode .stat-label {
+  color: #cccccc;
+}
+
+.dark-mode .stat-value {
+  color: #ffffff;
+}
+
+/* Social Profiles */
+.social-profiles {
+  padding: 20px;
+}
+
+.social-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333333;
+  margin: 0 0 16px 0;
+}
+
+.dark-mode .social-title {
+  color: #ffffff;
+}
+
+.social-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.social-item:last-child {
+  border-bottom: none;
+}
+
+.dark-mode .social-item {
+  border-bottom-color: #404040;
+}
+
+.social-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.social-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.dark-mode .social-icon {
+  background-color: #404040;
+}
+
+.social-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.social-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.social-platform {
+  font-size: 12px;
+  color: #666666;
+}
+
+.dark-mode .social-name {
+  color: #ffffff;
+}
+
+.dark-mode .social-platform {
+  color: #cccccc;
+}
+
+.social-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  color: #666666;
+  transition: all 0.3s ease;
+}
+
+.social-edit-btn:hover {
+  background-color: #f0f0f0;
+  color: #00d4ff;
+}
+
+.dark-mode .social-edit-btn {
+  color: #cccccc;
+}
+
+.dark-mode .social-edit-btn:hover {
+  background-color: #404040;
+  color: #00d4ff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-header {
+    padding: 15px;
+  }
+  
+  .profile-details {
+    padding: 0 15px 15px 15px;
+  }
+  
+  .profile-stats {
+    padding: 15px;
+  }
+  
+  .social-profiles {
+    padding: 15px;
+  }
+  
+  .profile-divider {
+    margin: 0 15px;
+  }
+}
