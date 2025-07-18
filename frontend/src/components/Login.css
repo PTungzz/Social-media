@@ -1,18 +1,4 @@
-/* Reset và base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* Login Page Styles */
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -20,7 +6,7 @@ body {
 }
 
 /* Top Bar */
-.top-bar {
+.login-page .top-bar {
   background-color: #ffffff;
   height: 120px;
   display: flex;
@@ -30,7 +16,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.logo {
+.login-page .logo {
   font-size: 36px;
   font-weight: bold;
   color: #00d4ff;
@@ -50,9 +36,9 @@ body {
 .login-container {
   background-color: #ffffff;
   border-radius: 12px;
-  padding: 50px;
+  padding: 40px;
   width: 100%;
-  max-width: 500px;
+  max-width: 800px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -60,7 +46,7 @@ body {
   text-align: center;
   font-size: 22px;
   color: #333333;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -69,7 +55,7 @@ body {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 20px;
 }
 
 .form-group {
@@ -78,16 +64,19 @@ body {
 
 .form-input {
   width: 100%;
-  padding: 18px;
-  border: 2px solid #e0e0e0;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 0.3s ease;
   outline: none;
+  background-color: #ffffff;
+  box-sizing: border-box;
 }
 
 .form-input:focus {
   border-color: #00d4ff;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.1);
 }
 
 .form-input::placeholder {
@@ -105,7 +94,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 .login-button:hover {
@@ -114,6 +103,32 @@ body {
 
 .login-button:active {
   background-color: #009ac7;
+}
+
+/* Demo Accounts */
+.demo-accounts {
+  background-color: #f0f8ff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 30px;
+  border-left: 4px solid #00d4ff;
+}
+
+.demo-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00d4ff;
+  margin: 0 0 10px 0;
+}
+
+.demo-account {
+  font-size: 13px;
+  color: #606770;
+  line-height: 1.4;
+}
+
+.demo-account strong {
+  color: #1c1e21;
 }
 
 /* Switch Mode */
@@ -146,32 +161,6 @@ body {
   text-align: center;
 }
 
-/* Demo Accounts */
-.demo-accounts {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f0f9ff;
-  border: 1px solid #e0f2fe;
-  border-radius: 8px;
-}
-
-.demo-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0369a1;
-  margin: 0 0 10px 0;
-}
-
-.demo-account {
-  font-size: 13px;
-  color: #0f172a;
-  line-height: 1.4;
-}
-
-.demo-account strong {
-  color: #0369a1;
-}
-
 /* Responsive Design */
 @media (max-width: 600px) {
   .main-content {
@@ -180,18 +169,18 @@ body {
   
   .login-container {
     padding: 35px 30px;
-    max-width: 450px;
+    max-width: 700px;
   }
   
   .welcome-title {
     font-size: 20px;
   }
   
-  .logo {
+  .login-page .logo {
     font-size: 32px;
   }
   
-  .top-bar {
+  .login-page .top-bar {
     height: 100px;
   }
 }
@@ -199,18 +188,18 @@ body {
 @media (max-width: 480px) {
   .login-container {
     padding: 30px 25px;
-    max-width: 400px;
+    max-width: 640px;
   }
   
   .welcome-title {
     font-size: 18px;
   }
   
-  .logo {
+  .login-page .logo {
     font-size: 28px;
   }
   
-  .top-bar {
+  .login-page .top-bar {
     height: 80px;
   }
 }

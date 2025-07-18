@@ -1,32 +1,24 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { findUserByEmail } from '../utils/localStorage';
 
 const Login = ({ onNavigateSignUp, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Danh sách tài khoản mặc định
-  const defaultAccounts = [
-    { email: 'admin@sociopedia.com', password: '123456', name: 'Admin User' },
-    { email: 'user@sociopedia.com', password: '123456', name: 'Regular User' },
-    { email: 'test@sociopedia.com', password: '123456', name: 'Test User' }
-  ];
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     
-    // Kiểm tra tài khoản mặc định
-    const account = defaultAccounts.find(acc => 
-      acc.email === email && acc.password === password
-    );
+    // Kiểm tra tài khoản từ local storage
+    const user = findUserByEmail(email);
     
-    if (account) {
-      console.log('Login successful:', account);
-      onLogin(account);
+    if (user && user.password === password) {
+      console.log('Login successful:', user);
+      onLogin(user);
     } else {
-      setError('Invalid email or password. Try admin@sociopedia.com / 123456');
+      setError('Invalid email or password. Try admin@sociopedia.com / admin123');
     }
   };
 
@@ -71,7 +63,7 @@ const Login = ({ onNavigateSignUp, onLogin }) => {
             </button>
           </form>
           <div className="demo-accounts">
-            <p className="demo-title">Demo Accounts:</p>
+            <p className="demo-title">Demo Account:</p>
             <div className="demo-account">
               <strong>Email:</strong> admin@sociopedia.com<br />
               <strong>Password:</strong> 123456

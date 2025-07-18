@@ -618,6 +618,20 @@
   color: #333333;
 }
 
+.author-name-clickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.author-name-clickable:hover {
+  color: #0079d3;
+  text-decoration: underline;
+}
+
+.dark-mode .author-name-clickable:hover {
+  color: #5ba2ff;
+}
+
 .author-info small {
   font-size: 12px;
   color: #666666;
@@ -668,13 +682,48 @@
   border-radius: 8px;
   overflow: hidden;
   max-width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.attachment-image:hover {
+  transform: scale(1.02);
+}
+
+.attachment-image:hover::after {
+  content: '🔍 Click to view full size';
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.dark-mode .attachment-image {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
 
 .attachment-image img {
   width: 100%;
   height: auto;
-  max-height: 400px;
-  object-fit: cover;
+  max-height: 600px;
+  object-fit: contain;
+  background-color: #f8f9fa;
+  transition: transform 0.2s ease;
+}
+
+.attachment-image img:hover {
+  transform: scale(1.05);
+}
+
+.dark-mode .attachment-image img {
+  background-color: #2d2d2d;
 }
 
 .attachment-file {
@@ -760,7 +809,8 @@
   }
   
   .attachment-image img {
-    max-height: 300px;
+    max-height: 400px;
+    object-fit: contain;
   }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './CreatePost.css';
 
-const CreatePost = ({ user, onCreatePost }) => {
+const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
   const [postContent, setPostContent] = useState('');
   const [showActions, setShowActions] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -114,19 +114,32 @@ const CreatePost = ({ user, onCreatePost }) => {
   };
 
   return (
-    <div className="create-post-container">
+    <div className={`create-post-container ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="create-post-header">
         <div className="user-avatar">
-          <img 
-            src="/api/placeholder/40/40" 
-            alt={user?.name || 'User'}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
-          />
-          <div className="avatar-fallback">
-            {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+          {user?.profilePicture ? (
+            <img 
+              src={user.profilePicture} 
+              alt={user?.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          ) : (
+            <img 
+              src="/api/placeholder/40/40" 
+              alt={user?.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          )}
+          <div className="avatar-fallback" style={{ display: user?.profilePicture ? 'none' : 'flex' }}>
+            {user?.firstName && user?.lastName 
+              ? `${user.firstName[0]}${user.lastName[0]}` 
+              : user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
           </div>
         </div>
         <div className="post-input-container">

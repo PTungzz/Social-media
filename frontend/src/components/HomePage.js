@@ -1,67 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UserProfileCard from './UserProfileCard';
 import CreatePost from './CreatePost';
 import './HomePage.css';
+import { 
+  getPosts, 
+  addPost, 
+  updatePost, 
+  getFriends, 
+  addFriend, 
+  removeFriend, 
+  getAllUsers 
+} from '../utils/localStorage';
 
-const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
+const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [friends, setFriends] = useState([]);
-  const [postLikes, setPostLikes] = useState({
-    1: 5, // Alice's post has 5 likes
-    2: 3, // Bob's post has 3 likes
-    4: 8, // Diana's post has 8 likes
-    6: 2  // Frank's post has 2 likes
-  });
+  const [postLikes, setPostLikes] = useState({});
   const [userLikedPosts, setUserLikedPosts] = useState({}); // Track which posts user has liked
   const [postComments, setPostComments] = useState({});
   const [showCommentInput, setShowCommentInput] = useState({});
   const [commentText, setCommentText] = useState({});
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      content: "Just finished reading an amazing book! 📚 Highly recommend it to anyone interested in personal development.",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      author: { name: "Alice Johnson", id: "alice_johnson" },
-      attachments: []
-    },
-    {
-      id: 2,
-      content: "Beautiful sunset today! 🌅 Nature never fails to amaze me.",
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      author: { name: "Bob Smith", id: "bob_smith" },
-      attachments: []
-    },
-    {
-      id: 3,
-      content: "Working on a new project. Excited to share the results soon! 💻",
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      author: { name: "Charlie Brown", id: "charlie_brown" },
-      attachments: []
-    },
-    {
-      id: 4,
-      content: "Had an amazing coffee this morning ☕ Perfect way to start the day!",
-      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
-      author: { name: "Diana Prince", id: "diana_prince" },
-      attachments: []
-    },
-    {
-      id: 5,
-      content: "Exploring new technologies and learning something new every day. The journey never ends! 🚀",
-      timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      author: { name: "Eve Wilson", id: "eve_wilson" },
-      attachments: []
-    },
-    {
-      id: 6,
-      content: "Weekend hiking trip was incredible! Fresh air and beautiful views. 🏔️",
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      author: { name: "Frank Miller", id: "frank_miller" },
-      attachments: []
-    }
-  ]);
+  const [posts, setPosts] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const loadedPosts = getPosts();
+    const loadedFriends = getFriends(user?.id);
+    const loadedUsers = getAllUsers();
+    
+    setPosts(loadedPosts);
+    setFriends(loadedFriends);
+    setAllUsers(loadedUsers);
+    
+    // Initialize post likes and comments from loaded posts
+    const likes = {};
+    const comments = {};
+    const userLikes = {};
+    
+    loadedPosts.forEach(post => {
+      likes[post.id] = post.likes || 0;
+      comments[post.id] = post.comments || [];
+      userLikes[post.id] = post.likedBy?.includes(user?.id) || false;
+    });
+    
+    setPostLikes(likes);
+    setPostComments(comments);
+    setUserLikedPosts(userLikes);
+  }, [user?.id]);
 
   const notifications = [
     {
@@ -118,7 +106,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
     setShowProfileMenu(false);
     switch(action) {
       case 'view':
-        console.log('View profile');
+        onViewProfile(user.id);
         break;
       case 'edit':
         console.log('Edit profile');
@@ -132,28 +120,47 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
   };
 
   const handleCreatePost = (newPost) => {
-    const postWithId = {
+    const savedPost = addPost({
       ...newPost,
-      id: Date.now() // Simple ID generation
-    };
-    setPosts(prevPosts => [postWithId, ...prevPosts]);
-    console.log('New post created:', postWithId);
+      author: user
+    });
+    
+    if (savedPost) {
+      setPosts(prevPosts => [savedPost, ...prevPosts]);
+      setPostLikes(prev => ({ ...prev, [savedPost.id]: 0 }));
+      setPostComments(prev => ({ ...prev, [savedPost.id]: [] }));
+      setUserLikedPosts(prev => ({ ...prev, [savedPost.id]: false }));
+      console.log('New post created:', savedPost);
+    }
   };
 
   // Friend management functions
   const handleAddFriend = (friendData) => {
-    setFriends(prevFriends => {
-      const isAlreadyFriend = prevFriends.some(f => f.id === friendData.id);
-      if (isAlreadyFriend) {
-        return prevFriends.filter(f => f.id !== friendData.id);
-      } else {
-        return [...prevFriends, friendData];
-      }
-    });
+    if (!friendData || !friendData.id) {
+      console.error('Friend data is missing or invalid:', friendData);
+      return;
+    }
+    
+    if (!user || !user.id) {
+      console.error('Current user is missing or invalid:', user);
+      return;
+    }
+    
+    const isCurrentlyFriend = isFriendCheck(friendData.id);
+    
+    if (isCurrentlyFriend) {
+      // Remove friend
+      removeFriend(user.id, friendData.id);
+      setFriends(prevFriends => prevFriends.filter(f => f !== friendData.id));
+    } else {
+      // Add friend
+      addFriend(user.id, friendData.id);
+      setFriends(prevFriends => [...prevFriends, friendData.id]);
+    }
   };
 
-  const isFriend = (userId) => {
-    return friends.some(f => f.id === userId);
+  const isFriendCheck = (friendId) => {
+    return friends.includes(friendId);
   };
 
   // Like management functions
@@ -165,12 +172,27 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
       [postId]: !isCurrentlyLiked
     }));
     
+    const newLikeCount = isCurrentlyLiked 
+      ? Math.max(0, (postLikes[postId] || 0) - 1) // Unlike: decrease by 1, but don't go below 0
+      : (postLikes[postId] || 0) + 1; // Like: increase by 1
+    
     setPostLikes(prevLikes => ({
       ...prevLikes,
-      [postId]: isCurrentlyLiked 
-        ? Math.max(0, (prevLikes[postId] || 0) - 1) // Unlike: decrease by 1, but don't go below 0
-        : (prevLikes[postId] || 0) + 1 // Like: increase by 1
+      [postId]: newLikeCount
     }));
+    
+    // Update post in localStorage
+    const currentPost = posts.find(p => p.id === postId);
+    if (currentPost) {
+      const updatedLikedBy = isCurrentlyLiked 
+        ? currentPost.likedBy?.filter(id => id !== user?.id) || []
+        : [...(currentPost.likedBy || []), user?.id];
+      
+      updatePost(postId, {
+        likes: newLikeCount,
+        likedBy: updatedLikedBy
+      });
+    }
   };
 
   // Comment management functions
@@ -191,15 +213,29 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
   const handleSubmitComment = (postId) => {
     const text = commentText[postId];
     if (text && text.trim()) {
+      const newComment = {
+        id: Date.now(),
+        text: text.trim(),
+        author: user?.firstName && user?.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user?.name || 'Anonymous',
+        timestamp: new Date()
+      };
+      
       setPostComments(prev => ({
         ...prev,
-        [postId]: [...(prev[postId] || []), {
-          id: Date.now(),
-          text: text.trim(),
-          author: user?.name || 'Anonymous',
-          timestamp: new Date()
-        }]
+        [postId]: [...(prev[postId] || []), newComment]
       }));
+      
+      // Update post in localStorage
+      const currentPost = posts.find(p => p.id === postId);
+      if (currentPost) {
+        const updatedComments = [...(currentPost.comments || []), newComment];
+        updatePost(postId, {
+          comments: updatedComments
+        });
+      }
+      
       setCommentText(prev => ({
         ...prev,
         [postId]: ''
@@ -359,14 +395,18 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
         <div className="content-layout">
           {/* Left Sidebar */}
           <div className="left-sidebar">
-            <UserProfileCard user={user} />
+            <UserProfileCard user={user} onViewProfile={onViewProfile} />
           </div>
           
           {/* Main Feed */}
           <div className="main-feed">
             {/* Create Post Section */}
             <div className="create-post-section">
-              <CreatePost user={user} onCreatePost={handleCreatePost} />
+              <CreatePost 
+                user={user} 
+                onCreatePost={handleCreatePost} 
+                isDarkMode={isDarkMode} 
+              />
             </div>
             
             {/* News Feed Section */}
@@ -380,32 +420,52 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
                           <div className="post-header">
                             <div className="post-author">
                               <div className="author-avatar">
-                                <img 
-                                  src="/api/placeholder/32/32" 
-                                  alt={post.author?.name || 'User'}
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="avatar-fallback">
-                                  {post.author?.name ? post.author.name.split(' ').map(n => n[0]).join('') : 'U'}
+                                {post.author?.profilePicture ? (
+                                  <img 
+                                    src={post.author.profilePicture} 
+                                    alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : (
+                                  <img 
+                                    src="/api/placeholder/32/32" 
+                                    alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                )}
+                                <div className="avatar-fallback" style={{ display: post.author?.profilePicture ? 'none' : 'flex' }}>
+                                  {post.author?.firstName && post.author?.lastName 
+                                    ? `${post.author.firstName[0]}${post.author.lastName[0]}` 
+                                    : post.author?.name && typeof post.author.name === 'string' ? post.author.name.split(' ').map(n => n[0]).join('') : 'U'}
                                 </div>
                               </div>
                               <div className="author-info">
-                                <strong>{post.author?.name || 'Unknown User'}</strong>
-                                <small>{post.timestamp?.toLocaleString()}</small>
+                                <strong 
+                                  className="author-name-clickable"
+                                  onClick={() => post.author?.id && onViewProfile(post.author.id)}
+                                >
+                                  {post.author?.firstName && post.author?.lastName 
+                                    ? `${post.author.firstName} ${post.author.lastName}` 
+                                    : post.author?.name || 'Unknown User'}
+                                </strong>
+                                <small>{new Date(post.timestamp).toLocaleString()}</small>
                               </div>
                             </div>
                             
                             {/* Add Friend Button */}
                             {post.author?.id && post.author.id !== user?.id && (
                               <button
-                                className={`friend-btn ${isFriend(post.author.id) ? 'remove-friend' : 'add-friend'}`}
+                                className={`friend-btn ${isFriendCheck(post.author.id) ? 'remove-friend' : 'add-friend'}`}
                                 onClick={() => handleAddFriend(post.author)}
-                                title={isFriend(post.author.id) ? 'Remove Friend' : 'Add Friend'}
+                                title={isFriendCheck(post.author.id) ? 'Remove Friend' : 'Add Friend'}
                               >
-                                {isFriend(post.author.id) ? (
+                                {isFriendCheck(post.author.id) ? (
                                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="8.5" cy="7" r="4"></circle>
@@ -434,7 +494,11 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
                               {post.attachments.map((attachment, attachIndex) => (
                                 <div key={attachIndex} className="post-attachment">
                                   {attachment.type === 'image' && attachment.preview && (
-                                    <div className="attachment-image">
+                                    <div 
+                                      className="attachment-image"
+                                      onClick={() => window.open(attachment.preview, '_blank')}
+                                      title="Click to view full size"
+                                    >
                                       <img src={attachment.preview} alt={attachment.name} />
                                     </div>
                                   )}
@@ -548,7 +612,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
                                         }}
                                       />
                                       <div className="avatar-fallback">
-                                        {comment.author.split(' ').map(n => n[0]).join('')}
+                                        {comment.author && typeof comment.author === 'string' ? comment.author.split(' ').map(n => n[0]).join('') : 'U'}
                                       </div>
                                     </div>
                                     <div className="comment-content">
@@ -586,24 +650,46 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode }) => {
               <h3>Friend List</h3>
               {friends.length > 0 ? (
                 <div className="friends-list">
-                  {friends.map((friend) => (
-                    <div key={friend.id} className="friend-item">
-                      <div className="friend-avatar">
-                        <img 
-                          src="/api/placeholder/32/32" 
-                          alt={friend.name}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                        <div className="avatar-fallback">
-                          {friend.name.split(' ').map(n => n[0]).join('')}
+                  {friends.map((friendId) => {
+                    const friendUser = allUsers.find(u => u.id === friendId);
+                    if (!friendUser) return null;
+                    
+                    return (
+                      <div key={friendId} className="friend-item">
+                        <div className="friend-avatar">
+                          {friendUser.profilePicture ? (
+                            <img 
+                              src={friendUser.profilePicture} 
+                              alt={friendUser.firstName ? `${friendUser.firstName} ${friendUser.lastName}` : friendUser.name}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <img 
+                              src="/api/placeholder/32/32" 
+                              alt={friendUser.firstName ? `${friendUser.firstName} ${friendUser.lastName}` : friendUser.name}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          )}
+                          <div className="avatar-fallback" style={{ display: friendUser.profilePicture ? 'none' : 'flex' }}>
+                            {friendUser.firstName && friendUser.lastName 
+                              ? `${friendUser.firstName[0]}${friendUser.lastName[0]}` 
+                              : friendUser.name && typeof friendUser.name === 'string' ? friendUser.name.split(' ').map(n => n[0]).join('') : 'U'}
+                          </div>
                         </div>
+                        <span className="friend-name">
+                          {friendUser.firstName && friendUser.lastName 
+                            ? `${friendUser.firstName} ${friendUser.lastName}` 
+                            : friendUser.name || 'Unknown User'}
+                        </span>
                       </div>
-                      <span className="friend-name">{friend.name}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p>No friends added yet. Add friends from posts!</p>
