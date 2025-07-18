@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 // Import routes
-// import authRoutes from './routes/authRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 // import postRoutes from './routes/postRoutes.js';
 // import chatRoutes from './routes/chatRoutes.js';
 
@@ -22,7 +22,7 @@ app.use(cors({
 }));
 
 // // Routes
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/posts', postRoutes);
 // app.use('/api/chat', chatRoutes);
 
