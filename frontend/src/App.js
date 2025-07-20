@@ -4,6 +4,7 @@ import Login from './components/Login';
 import SignUp from './components/SignUp';
 import HomePage from './components/HomePage';
 import UserProfile from './components/UserProfile';
+import Chat from './components/Chat';
 import './App.css';
 import { saveUser, getUser, logout, initializeSampleData } from './utils/localStorage';
 
@@ -77,6 +78,14 @@ function App() {
     setSelectedUserId(null);
   };
 
+  const handleNavigateToChat = () => {
+    setCurrentPage('chat');
+  };
+
+  const handleBackFromChat = () => {
+    setCurrentPage('home');
+  };
+
   if (isLoggedIn) {
     if (currentPage === 'profile' && selectedUserId) {
       return (
@@ -91,6 +100,22 @@ function App() {
       );
     }
     
+    if (currentPage === 'chat') {
+      return (
+        <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
+          <div className="chat-page">
+            <div className="chat-header-bar">
+              <button onClick={handleBackFromChat} className="back-button">
+                ← Quay lại
+              </button>
+              <h2>Tin nhắn</h2>
+            </div>
+            <Chat />
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
         <HomePage 
@@ -99,6 +124,7 @@ function App() {
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
           onViewProfile={handleViewProfile}
+          onNavigateToChat={handleNavigateToChat}
         />
       </div>
     );

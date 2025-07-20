@@ -1,24 +1,30 @@
 import React, { useState } from 'react';
 import './Login.css';
-import { findUserByEmail } from '../utils/localStorage';
+import { authAPI } from '../services/api';
 
 const Login = ({ onNavigateSignUp, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
-    // Kiểm tra tài khoản từ local storage
-    const user = findUserByEmail(email);
-    
-    if (user && user.password === password) {
-      console.log('Login successful:', user);
-      onLogin(user);
-    } else {
-      setError('Invalid email or password. Try admin@sociopedia.com / admin123');
+    try {
+      const response = await authAPI.login({ email, password });
+      
+      if (response.data.success) {
+        // Lưu token và user info vào localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Login successful:', response.data.user);
+        onLogin(response.data.user);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.response?.data?.message || 'Login failed. Please try again.');
     }
   };
 

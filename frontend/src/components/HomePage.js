@@ -12,7 +12,7 @@ import {
   getAllUsers 
 } from '../utils/localStorage';
 
-const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile }) => {
+const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, onNavigateToChat }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -289,6 +289,17 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile }) 
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
               </svg>
             )}
+          </button>
+
+          {/* Chat Button */}
+          <button 
+            className="icon-button chat-button"
+            onClick={onNavigateToChat}
+            title="Messages"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
           </button>
 
           {/* Notifications */}

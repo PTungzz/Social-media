@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './SignUp.css';
-import { saveUserToRegistry, findUserByEmail } from '../utils/localStorage';
+import { authAPI } from '../services/api';
 
 const SignUp = ({ onNavigateLogin, onSignUp }) => {
   const [form, setForm] = useState({
@@ -39,28 +39,30 @@ const SignUp = ({ onNavigateLogin, onSignUp }) => {
       return;
     }
     
-    // Check if email already exists
-    const existingUser = findUserByEmail(form.email);
-    if (existingUser) {
-      setError('Email already exists. Please use a different email.');
-      return;
-    }
-    
-    // Save user to registry
     try {
-      const savedUser = await saveUserToRegistry(form);
+      // Tạo user data theo format của backend
+      const userData = {
+        username: `${form.firstName}${form.lastName}`.toLowerCase(),
+        email: form.email,
+        password: form.password
+      };
       
-      if (savedUser) {
+      const response = await authAPI.register(userData);
+      
+      if (response.data.success) {
         setSuccess('Account created successfully! Redirecting to home...');
+        
+        // Lưu token và user info vào localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
         setTimeout(() => {
-          onSignUp(savedUser);
+          onSignUp(response.data.user);
         }, 1500);
-      } else {
-        setError('Failed to create account. Please try again.');
       }
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      setError('Failed to create account. Please try again.');
+      console.error('Registration error:', error);
+      setError(error.response?.data?.message || 'Failed to create account. Please try again.');
     }
   };
 
