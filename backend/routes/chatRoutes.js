@@ -1,5 +1,5 @@
 import express from 'express';
-import { sendMessage, getMessages, getChatList, markAsRead } from '../controllers/chatController.js';
+import { sendMessage, getMessages, getChatList, markAsRead, getUnreadCount, markAllAsRead } from '../controllers/chatController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -18,5 +18,11 @@ router.get('/list', getChatList);
 
 // Đánh dấu tin nhắn đã đọc
 router.put('/read/:senderId', markAsRead);
+
+// Lấy số lượng tin nhắn chưa đọc
+router.get('/unread-count', getUnreadCount);
+
+// Đánh dấu tất cả tin nhắn đã đọc
+router.put('/mark-all-read', markAllAsRead);
 
 export default router;

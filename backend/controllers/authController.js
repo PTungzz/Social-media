@@ -28,8 +28,13 @@ export const register = async (req, res) => {
         // Create new user
         const user = new User({
             username: req.body.username,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
             email: req.body.email,
-            password: hashedPassword
+            password: hashedPassword,
+            location: req.body.location || '',
+            occupation: req.body.occupation || '',
+            avatar: req.body.avatar || ''
         });
 
         const savedUser = await user.save();
@@ -47,7 +52,11 @@ export const register = async (req, res) => {
             user: {
                 id: savedUser._id,
                 username: savedUser.username,
+                firstName: savedUser.firstName,
+                lastName: savedUser.lastName,
                 email: savedUser.email,
+                location: savedUser.location,
+                occupation: savedUser.occupation,
                 avatar: savedUser.avatar
             }
         });
@@ -99,7 +108,11 @@ export const login = async (req, res) => {
             user: {
                 id: user._id,
                 username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 email: user.email,
+                location: user.location,
+                occupation: user.occupation,
                 avatar: user.avatar
             }
         });
@@ -141,6 +154,37 @@ export const getAllUsers = async (req, res) => {
         });
     } catch (error) {
         console.error('Get users error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get user by ID
+export const getUserById = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const user = await User.findById(userId).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                location: user.location,
+                occupation: user.occupation,
+                avatar: user.avatar,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (error) {
+        console.error('Get user by ID error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

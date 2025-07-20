@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { chatAPI } from '../services/api';
 import './ChatWindow.css';
 
-const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
+const ChatWindow = ({ selectedUser, currentUser, onMessageSent, isDarkMode }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [socket, setSocket] = useState(null);
@@ -17,6 +17,19 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
 
+    // Format tên người dùng (viết hoa chữ cái đầu)
+    const formatUserName = (user) => {
+        if (user.firstName && user.lastName) {
+            return `${user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)} ${user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)}`;
+        }
+        if (user.name) {
+            return user.name.split(' ').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+        }
+        return user.username || 'Unknown User';
+    };
+
     useEffect(() => {
         if (selectedUser) {
             fetchMessages();
@@ -27,6 +40,7 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
                 socket.disconnect();
             }
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedUser]);
 
     useEffect(() => {
@@ -54,12 +68,23 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         });
 
         newSocket.on('connect', () => {
-            console.log('Connected to WebSocket');
+            setSocket(newSocket);
             newSocket.emit('set_online');
         });
 
+        newSocket.on('connect_error', (error) => {
+            console.error('❌ WebSocket connection failed:', error);
+            setSocket(null);
+        });
+
+        newSocket.on('disconnect', (reason) => {
+            setSocket(null);
+        });
+
         newSocket.on('receive_message', (data) => {
-            if (data.message.sender._id === selectedUser._id) {
+            const selectedUserId = selectedUser._id || selectedUser.id;
+            
+            if (data.message.sender._id === selectedUserId) {
                 setMessages(prev => [...prev, data.message]);
                 markAsRead();
             }
@@ -71,14 +96,14 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         });
 
         newSocket.on('user_typing', (data) => {
-            if (data.userId === selectedUser._id) {
+            const selectedUserId = selectedUser._id || selectedUser.id;
+            if (data.userId === selectedUserId) {
                 setIsTyping(data.isTyping);
             }
         });
 
         newSocket.on('messages_read', (data) => {
             // Có thể cập nhật trạng thái đã đọc ở đây
-            console.log('Messages read by:', data.readerName);
         });
 
         newSocket.on('error', (error) => {
@@ -90,8 +115,14 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
 
     const fetchMessages = async () => {
         try {
+            if (!selectedUser?._id && !selectedUser?.id) {
+                return;
+            }
+            
             setLoading(true);
-            const response = await chatAPI.getMessages(selectedUser._id);
+            const userId = selectedUser._id || selectedUser.id;
+            
+            const response = await chatAPI.getMessages(userId);
 
             if (response.data.success) {
                 setMessages(response.data.messages);
@@ -100,10 +131,10 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
                 }
             }
         } catch (error) {
-            console.error('Lỗi lấy tin nhắn:', error);
+            console.error('❌ Lỗi lấy tin nhắn:', error);
             // Nếu chưa có tin nhắn, không cần báo lỗi
             if (error.response?.status !== 404) {
-                console.error('Lỗi lấy tin nhắn:', error);
+                console.error('🚫 Unexpected error:', error.message);
             }
         } finally {
             setLoading(false);
@@ -112,30 +143,33 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
 
     const markAsRead = async () => {
         try {
-            await chatAPI.markAsRead(selectedUser._id);
+            const selectedUserId = selectedUser._id || selectedUser.id;
+            await chatAPI.markAsRead(selectedUserId);
 
             if (socket) {
-                socket.emit('mark_as_read', { senderId: selectedUser._id });
+                socket.emit('mark_as_read', { senderId: selectedUserId });
             }
         } catch (error) {
-            console.error('Lỗi đánh dấu đã đọc:', error);
+            console.error('Lỗi mark as read:', error);
         }
     };
 
     const sendMessage = async (e) => {
         e.preventDefault();
         
-        console.log('Sending message:', { content: newMessage, hasFile: !!selectedFile, filePreview: !!filePreview });
-        
         if (!newMessage.trim() && !selectedFile) return;
+        
+        if (!selectedUser?._id && !selectedUser?.id) {
+            console.error('No selected user to send message to');
+            return;
+        }
 
+        const receiverId = selectedUser._id || selectedUser.id;
         const messageData = {
-            receiverId: selectedUser._id,
+            receiverId: receiverId,
             content: newMessage.trim(),
             image: filePreview
         };
-        
-        console.log('Message data:', messageData);
 
         // Nếu có socket, gửi qua WebSocket
         if (socket) {
@@ -143,7 +177,8 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         } else {
             // Nếu không có socket, gửi qua HTTP API
             try {
-                await chatAPI.sendMessage(messageData);
+                const response = await chatAPI.sendMessage(messageData);
+                console.log('API response:', response);
                 
                 // Thêm tin nhắn vào danh sách local
                 const newMessageObj = {
@@ -155,6 +190,7 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
                     createdAt: new Date().toISOString(),
                     seen: false
                 };
+                console.log('Adding message to local state:', newMessageObj);
                 setMessages(prev => [...prev, newMessageObj]);
             } catch (error) {
                 console.error('Lỗi gửi tin nhắn:', error);
@@ -169,7 +205,8 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         setTyping(false);
 
         if (socket) {
-            socket.emit('typing', { receiverId: selectedUser._id, isTyping: false });
+            const receiverId = selectedUser._id || selectedUser.id;
+            socket.emit('typing', { receiverId: receiverId, isTyping: false });
         }
 
         // Callback để refresh chat list
@@ -184,7 +221,8 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         if (!typing) {
             setTyping(true);
             if (socket) {
-                socket.emit('typing', { receiverId: selectedUser._id, isTyping: true });
+                const receiverId = selectedUser._id || selectedUser.id;
+                socket.emit('typing', { receiverId: receiverId, isTyping: true });
             }
         }
 
@@ -197,7 +235,8 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
         typingTimeoutRef.current = setTimeout(() => {
             setTyping(false);
             if (socket) {
-                socket.emit('typing', { receiverId: selectedUser._id, isTyping: false });
+                const receiverId = selectedUser._id || selectedUser.id;
+                socket.emit('typing', { receiverId: receiverId, isTyping: false });
             }
         }, 1000);
     };
@@ -259,18 +298,18 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
     console.log('Current user ID type:', typeof currentUser._id, 'Value:', currentUser._id);
 
     return (
-        <div className="chat-window">
+        <div className={`chat-window ${isDarkMode ? 'dark-mode' : ''}`}>
             <div className="chat-header">
                 <div className="chat-user-info">
                     <img 
                         src={selectedUser.avatar || '/unnamed.jpg'} 
-                        alt={selectedUser.username}
+                        alt={formatUserName(selectedUser)}
                         onError={(e) => {
                             e.target.src = '/unnamed.jpg';
                         }}
                     />
                     <div>
-                        <h3>{selectedUser.username}</h3>
+                        <h3>{formatUserName(selectedUser)}</h3>
                         {isTyping && <span className="typing-indicator">Đang nhập...</span>}
                     </div>
                 </div>
@@ -300,7 +339,7 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
                                         <img 
                                             className="message-avatar"
                                             src={message.sender.avatar || '/unnamed.jpg'}
-                                            alt={message.sender.username}
+                                            alt={formatUserName(message.sender)}
                                             onError={(e) => {
                                                 e.target.src = '/unnamed.jpg';
                                             }}
@@ -311,7 +350,7 @@ const ChatWindow = ({ selectedUser, currentUser, onMessageSent }) => {
                                         {message.image && (
                                             <img 
                                                 src={message.image} 
-                                                alt="Message image" 
+                                                alt="Shared content" 
                                                 className="message-image"
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';

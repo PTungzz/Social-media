@@ -45,14 +45,21 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
+.friends-search {
+    padding: 10px 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
 .search-input {
     width: 100%;
-    padding: 10px 15px;
+    max-width: 280px; /* Giới hạn chiều rộng tối đa */
+    padding: 8px 12px; /* Giảm padding */
     border: 1px solid #e1e8ed;
     border-radius: 20px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s ease;
+    box-sizing: border-box; /* Đảm bảo padding không làm tăng chiều rộng */
 }
 
 .search-input:focus {
@@ -183,4 +190,63 @@
 
 .chat-items::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* Dark mode styles for ChatList */
+.chat-list.dark-mode {
+    background: #2d3748;
+    border-right-color: #4a5568;
+}
+
+.chat-list.dark-mode .chat-list-header {
+    background: #1a202c;
+    border-bottom-color: #4a5568;
+    color: #ffffff;
+}
+
+.chat-list.dark-mode .friends-search {
+    background: #2d3748;
+    border-bottom-color: #4a5568;
+}
+
+.chat-list.dark-mode .search-input {
+    background: #4a5568;
+    border-color: #718096;
+    color: #ffffff;
+}
+
+.chat-list.dark-mode .search-input::placeholder {
+    color: #a0aec0;
+}
+
+.chat-list.dark-mode .chat-item {
+    border-bottom-color: #4a5568;
+}
+
+.chat-list.dark-mode .chat-item:hover {
+    background: #4a5568;
+}
+
+.chat-list.dark-mode .chat-item.active {
+    background: #2b6cb0;
+}
+
+.chat-list.dark-mode .user-name {
+    color: #ffffff;
+}
+
+.chat-list.dark-mode .last-message {
+    color: #a0aec0;
+}
+
+.chat-list.dark-mode .time {
+    color: #718096;
+}
+
+.chat-list.dark-mode .loading {
+    color: #a0aec0;
+}
+
+.chat-list.dark-mode .no-friends {
+    color: #a0aec0;
 } 

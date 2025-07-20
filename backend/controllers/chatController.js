@@ -44,24 +44,44 @@ export const getMessages = async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
+        
+        console.log('📨 getMessages called');
+        console.log('📋 Target user ID:', userId);
+        console.log('👤 Current user ID:', currentUserId);
+        console.log('🔍 Current user object:', req.user);
 
+        if (!userId || !currentUserId) {
+            console.log('❌ Missing user IDs');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'User IDs are required' 
+            });
+        }
+
+        console.log('🔎 Searching for messages...');
         const messages = await ChatMessage.find({
             $or: [
                 { sender: currentUserId, receiver: userId },
                 { sender: userId, receiver: currentUserId }
             ]
         })
-        .populate('sender', 'username avatar')
-        .populate('receiver', 'username avatar')
+        .populate('sender', 'username avatar firstName lastName')
+        .populate('receiver', 'username avatar firstName lastName')
         .sort({ createdAt: 1 });
+
+        console.log(`📊 Found ${messages.length} messages`);
 
         res.json({
             success: true,
             messages
         });
     } catch (error) {
-        console.error('Lỗi lấy tin nhắn:', error);
-        res.status(500).json({ message: 'Lỗi server' });
+        console.error('❌ Lỗi lấy tin nhắn:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Lỗi server', 
+            error: error.message 
+        });
     }
 };
 
@@ -151,6 +171,51 @@ export const markAsRead = async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi đánh dấu đã đọc:', error);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+};
+
+// Lấy số lượng tin nhắn chưa đọc
+export const getUnreadCount = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+
+        const unreadCount = await ChatMessage.countDocuments({
+            receiver: currentUserId,
+            seen: false
+        });
+
+        res.json({
+            success: true,
+            count: unreadCount
+        });
+    } catch (error) {
+        console.error('Lỗi lấy số tin nhắn chưa đọc:', error);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+};
+
+// Đánh dấu tất cả tin nhắn đã đọc
+export const markAllAsRead = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+
+        await ChatMessage.updateMany(
+            {
+                receiver: currentUserId,
+                seen: false
+            },
+            {
+                seen: true
+            }
+        );
+
+        res.json({
+            success: true,
+            message: 'Đã đánh dấu tất cả tin nhắn đã đọc'
+        });
+    } catch (error) {
+        console.error('Lỗi đánh dấu tất cả đã đọc:', error);
         res.status(500).json({ message: 'Lỗi server' });
     }
 };

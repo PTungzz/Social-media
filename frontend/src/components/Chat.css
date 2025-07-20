@@ -1,10 +1,65 @@
-.chat-container {
+/* Chat Page Styles */
+.chat-page {
+    min-height: 100vh;
     display: flex;
-    height: 100vh;
-    background: #fff;
-    border-radius: 8px;
+    flex-direction: column;
+}
+
+/* Top Bar - với button Quay lại và text Tin nhắn */
+.chat-page .top-bar {
+    background-color: #ffffff;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-page .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.chat-page .back-button {
+    background: none;
+    border: none;
+    color: #00d4ff;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.chat-page .back-button:hover {
+    background-color: #f0f9ff;
+    transform: translateX(-2px);
+}
+
+.chat-page .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.chat-page .logo {
+    font-size: 32px;
+    font-weight: bold;
+    color: #00d4ff;
+    margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.chat-content {
+    display: flex;
+    flex: 1;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .chat-sidebar {
@@ -49,4 +104,83 @@
     .chat-main {
         height: 65%;
     }
+}
+
+/* Dark mode toggle styling */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dark-mode-toggle {
+    background: none;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.dark-mode-toggle:hover {
+    border-color: #00d4ff;
+    background-color: #f0f9ff;
+    transform: scale(1.05);
+}
+
+.dark-mode-toggle:active {
+    transform: scale(0.95);
+}
+
+.dark-mode-toggle svg {
+    width: 18px;
+    height: 18px;
+    transition: all 0.3s ease;
+}
+
+/* Dark mode styles */
+.chat-page.dark-mode {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+.chat-page.dark-mode .top-bar {
+    background-color: #2d3748;
+    border-bottom-color: #4a5568;
+}
+
+.chat-page.dark-mode .page-title {
+    color: #ffffff;
+}
+
+.chat-page.dark-mode .back-button {
+    color: #ffffff;
+    border-color: #4a5568;
+}
+
+.chat-page.dark-mode .back-button:hover {
+    background-color: #4a5568;
+}
+
+.chat-page.dark-mode .dark-mode-toggle {
+    border-color: #4a5568;
+}
+
+.chat-page.dark-mode .dark-mode-toggle:hover {
+    border-color: #00d4ff;
+    background-color: #4a5568;
+}
+
+.chat-page.dark-mode .chat-sidebar {
+    background-color: #2d3748;
+    border-right-color: #4a5568;
+}
+
+.chat-page.dark-mode .chat-main {
+    background-color: #1a1a1a;
 } 

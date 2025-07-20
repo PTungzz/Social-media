@@ -87,6 +87,34 @@ export const getAllUsers = () => {
   }
 };
 
+export const saveAllUsers = (users) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    return true;
+  } catch (error) {
+    console.error('Error saving all users:', error);
+    return false;
+  }
+};
+
+export const addUserToStorage = (user) => {
+  try {
+    const users = getAllUsers();
+    const existingUser = users.find(u => (u.id || u._id) === (user.id || user._id));
+    
+    if (!existingUser) {
+      users.push(user);
+      saveAllUsers(users);
+      console.log('✅ Added user to localStorage:', user.firstName, user.lastName);
+      return true;
+    }
+    return false; // User already exists
+  } catch (error) {
+    console.error('Error adding user to storage:', error);
+    return false;
+  }
+};
+
 export const findUserByEmail = (email) => {
   try {
     const users = getAllUsers();

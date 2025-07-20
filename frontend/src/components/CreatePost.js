@@ -117,9 +117,9 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
     <div className={`create-post-container ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className="create-post-header">
         <div className="user-avatar">
-          {user?.profilePicture ? (
+          {user?.avatar ? (
             <img 
-              src={user.profilePicture} 
+              src={user.avatar} 
               alt={user?.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
               onError={(e) => {
                 e.target.style.display = 'none';
@@ -136,7 +136,7 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
               }}
             />
           )}
-          <div className="avatar-fallback" style={{ display: user?.profilePicture ? 'none' : 'flex' }}>
+          <div className="avatar-fallback" style={{ display: user?.avatar ? 'none' : 'flex' }}>
             {user?.firstName && user?.lastName 
               ? `${user.firstName[0]}${user.lastName[0]}` 
               : user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}

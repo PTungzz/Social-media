@@ -68,13 +68,6 @@ const Login = ({ onNavigateSignUp, onLogin }) => {
               LOGIN
             </button>
           </form>
-          <div className="demo-accounts">
-            <p className="demo-title">Demo Account:</p>
-            <div className="demo-account">
-              <strong>Email:</strong> admin@sociopedia.com<br />
-              <strong>Password:</strong> 123456
-            </div>
-          </div>
           <div className="switch-mode">
             <span className="switch-link" onClick={onNavigateSignUp}>
               Don't have an account? Sign Up here.

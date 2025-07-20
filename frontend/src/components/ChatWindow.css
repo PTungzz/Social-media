@@ -40,6 +40,8 @@
     font-size: 18px;
     font-weight: 600;
     color: #1a1a1a;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
 }
 
 .typing-indicator {
@@ -322,4 +324,91 @@
     .message-content {
         max-width: 85%;
     }
+}
+
+/* Dark mode styles for ChatWindow */
+.chat-window.dark-mode {
+    background: #1a202c;
+}
+
+.chat-window.dark-mode .chat-window-empty {
+    background: #1a202c;
+    color: #a0aec0;
+}
+
+.chat-window.dark-mode .chat-header {
+    background: #2d3748;
+    border-bottom-color: #4a5568;
+}
+
+.chat-window.dark-mode .chat-user-info h3 {
+    color: #ffffff;
+}
+
+.chat-window.dark-mode .typing-indicator {
+    color: #a0aec0;
+}
+
+.chat-window.dark-mode .chat-messages {
+    background: #1a202c;
+}
+
+.chat-window.dark-mode .message.own .message-content {
+    background: #2b6cb0;
+    color: #ffffff;
+}
+
+.chat-window.dark-mode .message.other .message-content {
+    background: #4a5568;
+    color: #ffffff;
+}
+
+.chat-window.dark-mode .message-time {
+    color: #718096;
+}
+
+.chat-window.dark-mode .chat-input {
+    background: #2d3748;
+    border-top-color: #4a5568;
+}
+
+.chat-window.dark-mode .message-input {
+    background: #4a5568;
+    border-color: #718096;
+    color: #ffffff;
+}
+
+.chat-window.dark-mode .message-input::placeholder {
+    color: #a0aec0;
+}
+
+.chat-window.dark-mode .send-button {
+    background: #2b6cb0;
+}
+
+.chat-window.dark-mode .send-button:hover {
+    background: #2c5aa0;
+}
+
+.chat-window.dark-mode .send-button:disabled {
+    background: #4a5568;
+    color: #718096;
+}
+
+.chat-window.dark-mode .attach-button {
+    color: #a0aec0;
+}
+
+.chat-window.dark-mode .attach-button:hover {
+    color: #00d4ff;
+    background: #4a5568;
+}
+
+.chat-window.dark-mode .emoji-button {
+    color: #a0aec0;
+}
+
+.chat-window.dark-mode .emoji-button:hover {
+    color: #00d4ff;
+    background: #4a5568;
 } 

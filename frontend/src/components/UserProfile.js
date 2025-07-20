@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './UserProfile.css';
 import UserProfileCard from './UserProfileCard';
-import { getPosts, getAllUsers } from '../utils/localStorage';
+import { getPosts } from '../utils/localStorage';
+import { authAPI } from '../services/api';
 
 const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
   const [user, setUser] = useState(null);
@@ -9,16 +10,15 @@ const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserData = () => {
+    const loadUserData = async () => {
       try {
-        // Get user data
-        const allUsers = getAllUsers();
-        const foundUser = allUsers.find(u => u.id === userId);
+        // Get user data from API
+        const response = await authAPI.getUserById(userId);
         
-        if (foundUser) {
-          setUser(foundUser);
+        if (response.data.success) {
+          setUser(response.data.user);
           
-          // Get user's posts
+          // Get user's posts from localStorage (posts vẫn lưu trong localStorage)
           const allPosts = getPosts();
           const filteredPosts = allPosts.filter(post => post.author?.id === userId);
           setUserPosts(filteredPosts);
@@ -31,7 +31,9 @@ const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
       }
     };
 
-    loadUserData();
+    if (userId) {
+      loadUserData();
+    }
   }, [userId]);
 
   const formatDate = (dateString) => {
@@ -100,9 +102,9 @@ const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
                       <div className="post-header">
                         <div className="post-author">
                           <div className="author-avatar">
-                            {user.profilePicture ? (
+                            {user.avatar ? (
                               <img 
-                                src={user.profilePicture} 
+                                src={user.avatar} 
                                 alt={user.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
                                 onError={(e) => {
                                   e.target.style.display = 'none';
@@ -119,7 +121,7 @@ const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
                                 }}
                               />
                             )}
-                            <div className="avatar-fallback" style={{ display: user.profilePicture ? 'none' : 'flex' }}>
+                            <div className="avatar-fallback" style={{ display: user.avatar ? 'none' : 'flex' }}>
                               {user.firstName && user.lastName 
                                 ? `${user.firstName[0]}${user.lastName[0]}` 
                                 : user.name && typeof user.name === 'string' ? user.name.split(' ').map(n => n[0]).join('') : 'U'}

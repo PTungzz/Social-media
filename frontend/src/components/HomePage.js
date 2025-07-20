@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import UserProfileCard from './UserProfileCard';
 import CreatePost from './CreatePost';
+import { friendsAPI, chatAPI } from '../services/api';
+import { io } from 'socket.io-client';
 import './HomePage.css';
 import { 
   getPosts, 
   addPost, 
   updatePost, 
-  getFriends, 
-  addFriend, 
-  removeFriend, 
-  getAllUsers 
+  getAllUsers
 } from '../utils/localStorage';
 
 const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, onNavigateToChat }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [friends, setFriends] = useState([]);
+  const [friends, setFriends] = useState([]); // Store complete friend objects from backend
   const [postLikes, setPostLikes] = useState({});
   const [userLikedPosts, setUserLikedPosts] = useState({}); // Track which posts user has liked
   const [postComments, setPostComments] = useState({});
@@ -24,32 +23,165 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   const [commentText, setCommentText] = useState({});
   const [posts, setPosts] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState(0); // Track unread messages count
+  const [socket, setSocket] = useState(null); // WebSocket connection
 
-  // Load data from localStorage on component mount
+  // Load data from localStorage and backend on component mount
   useEffect(() => {
-    const loadedPosts = getPosts();
-    const loadedFriends = getFriends(user?.id);
-    const loadedUsers = getAllUsers();
+    const loadData = async () => {
+      const loadedPosts = getPosts();
+      setPosts(loadedPosts);
+      
+      // Load friends from backend API only - no localStorage involvement
+      if (user?.id || user?._id) {
+        try {
+          const response = await friendsAPI.getFriends();
+          if (response.data.success) {
+            // Store complete friend objects (not just IDs)
+            setFriends(response.data.friends);
+          } else {
+            setFriends([]);
+          }
+        } catch (error) {
+          console.error('❌ Failed to load friends from backend:', error);
+          setFriends([]);
+        }
+      }
+      
+      const loadedUsers = getAllUsers();
+      setAllUsers(loadedUsers);
+      
+      // Initialize post likes and comments from loaded posts
+      const likes = {};
+      const comments = {};
+      const userLikes = {};
+      
+      loadedPosts.forEach(post => {
+        likes[post.id] = post.likes || 0;
+        comments[post.id] = post.comments || [];
+        userLikes[post.id] = post.likedBy?.includes(user?.id) || false;
+      });
+      
+      setPostLikes(likes);
+      setPostComments(comments);
+      setUserLikedPosts(userLikes);
+    };
     
-    setPosts(loadedPosts);
-    setFriends(loadedFriends);
-    setAllUsers(loadedUsers);
-    
-    // Initialize post likes and comments from loaded posts
-    const likes = {};
-    const comments = {};
-    const userLikes = {};
-    
-    loadedPosts.forEach(post => {
-      likes[post.id] = post.likes || 0;
-      comments[post.id] = post.comments || [];
-      userLikes[post.id] = post.likedBy?.includes(user?.id) || false;
-    });
-    
-    setPostLikes(likes);
-    setPostComments(comments);
-    setUserLikedPosts(userLikes);
+    loadData();
+    loadUnreadMessages();
   }, [user?.id]);
+
+  // Load unread messages count
+  const loadUnreadMessages = async () => {
+    try {
+      if (!user?.id && !user?._id) return;
+      
+      // Use real API to get unread messages count
+      const response = await chatAPI.getUnreadCount();
+      if (response.data.success) {
+        setUnreadMessages(response.data.count || 0);
+      } else {
+        // Fallback to localStorage for demo
+        const storedUnread = localStorage.getItem(`unreadMessages_${user.id || user._id}`);
+        setUnreadMessages(storedUnread ? parseInt(storedUnread) : 0);
+      }
+    } catch (error) {
+      console.error('Failed to load unread messages:', error);
+      // Fallback to localStorage
+      const storedUnread = localStorage.getItem(`unreadMessages_${user.id || user._id}`);
+      setUnreadMessages(storedUnread ? parseInt(storedUnread) : 0);
+    }
+  };
+
+  // Function to update unread messages count
+  const updateUnreadMessages = (count) => {
+    setUnreadMessages(count);
+    localStorage.setItem(`unreadMessages_${user.id || user._id}`, count.toString());
+  };
+
+  // Function to clear unread messages when user opens chat
+  const clearUnreadMessages = async () => {
+    try {
+      setUnreadMessages(0);
+      localStorage.removeItem(`unreadMessages_${user.id || user._id}`);
+      
+      // Mark all messages as read via API
+      await chatAPI.markAllAsRead();
+    } catch (error) {
+      console.error('Failed to mark messages as read:', error);
+    }
+  };
+
+  // WebSocket connection for real-time messages
+  useEffect(() => {
+    if (!user?.id && !user?._id) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Initialize WebSocket connection
+    const newSocket = io('http://localhost:5001', {
+      auth: { token }
+    });
+
+    newSocket.on('connect', () => {
+      console.log('📡 Connected to WebSocket for notifications');
+    });
+
+    // Listen for new messages
+    newSocket.on('new_message', (messageData) => {
+      console.log('📩 New message received:', messageData);
+      
+      // Only increment if the message is not from current user
+      if (messageData.senderId !== (user.id || user._id)) {
+        setUnreadMessages(prev => {
+          const newCount = prev + 1;
+          localStorage.setItem(`unreadMessages_${user.id || user._id}`, newCount.toString());
+          return newCount;
+        });
+      }
+    });
+
+    // Listen for message read events
+    newSocket.on('messages_read', (data) => {
+      console.log('✅ Messages marked as read:', data);
+      if (data.userId === (user.id || user._id)) {
+        setUnreadMessages(0);
+        localStorage.removeItem(`unreadMessages_${user.id || user._id}`);
+      }
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('📡 Disconnected from WebSocket');
+    });
+
+    setSocket(newSocket);
+
+    // Cleanup on unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user?.id, user?._id]);
+
+  // Test function để demo unread messages (có thể xóa trong production)
+  const simulateNewMessage = () => {
+    const newCount = unreadMessages + 1;
+    setUnreadMessages(newCount);
+    localStorage.setItem(`unreadMessages_${user.id || user._id}`, newCount.toString());
+  };
+
+  // Add test button to check unread messages (development only)
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey && e.key === 'm') {
+        simulateNewMessage();
+        console.log('Simulated new message. Unread count:', unreadMessages + 1);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [unreadMessages]);
 
   const notifications = [
     {
@@ -135,32 +267,43 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   };
 
   // Friend management functions
-  const handleAddFriend = (friendData) => {
-    if (!friendData || !friendData.id) {
+  const handleAddFriend = async (friendData) => {
+    if (!friendData || (!friendData.id && !friendData._id)) {
       console.error('Friend data is missing or invalid:', friendData);
       return;
     }
     
-    if (!user || !user.id) {
+    if (!user || (!user.id && !user._id)) {
       console.error('Current user is missing or invalid:', user);
       return;
     }
     
-    const isCurrentlyFriend = isFriendCheck(friendData.id);
+    const friendId = friendData.id || friendData._id;
+    const isCurrentlyFriend = isFriendCheck(friendId);
     
-    if (isCurrentlyFriend) {
-      // Remove friend
-      removeFriend(user.id, friendData.id);
-      setFriends(prevFriends => prevFriends.filter(f => f !== friendData.id));
-    } else {
-      // Add friend
-      addFriend(user.id, friendData.id);
-      setFriends(prevFriends => [...prevFriends, friendData.id]);
+    try {
+      if (isCurrentlyFriend) {
+        // Remove friend from backend
+        await friendsAPI.removeFriend(friendId);
+        
+        // Remove from local state
+        setFriends(prevFriends => prevFriends.filter(f => (f._id || f.id) !== friendId));
+      } else {
+        // Add friend to backend
+        const response = await friendsAPI.addFriend(friendId);
+        if (response.data.success) {
+          // Add complete friend object to local state
+          setFriends(prevFriends => [...prevFriends, response.data.friend]);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error managing friend:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi thực hiện thao tác');
     }
   };
 
   const isFriendCheck = (friendId) => {
-    return friends.includes(friendId);
+    return friends.some(friend => (friend._id || friend.id) === friendId);
   };
 
   // Like management functions
@@ -294,12 +437,20 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
           {/* Chat Button */}
           <button 
             className="icon-button chat-button"
-            onClick={onNavigateToChat}
+            onClick={() => {
+              clearUnreadMessages();
+              onNavigateToChat();
+            }}
             title="Messages"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
+            {unreadMessages > 0 && (
+              <span className="message-badge">
+                {unreadMessages > 9 ? '9+' : unreadMessages}
+              </span>
+            )}
           </button>
 
           {/* Notifications */}
@@ -351,10 +502,18 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
               title="Profile Menu"
             >
               <div className="profile-avatar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+                {user?.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={`${user.firstName || 'User'} ${user.lastName || ''}`}
+                    className="user-avatar-img"
+                  />
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                )}
               </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="6,9 12,15 18,9"></polyline>
@@ -431,9 +590,9 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                           <div className="post-header">
                             <div className="post-author">
                               <div className="author-avatar">
-                                {post.author?.profilePicture ? (
+                                {post.author?.avatar ? (
                                   <img 
-                                    src={post.author.profilePicture} 
+                                    src={post.author.avatar} 
                                     alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
                                     onError={(e) => {
                                       e.target.style.display = 'none';
@@ -450,7 +609,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                                     }}
                                   />
                                 )}
-                                <div className="avatar-fallback" style={{ display: post.author?.profilePicture ? 'none' : 'flex' }}>
+                                <div className="avatar-fallback" style={{ display: post.author?.avatar ? 'none' : 'flex' }}>
                                   {post.author?.firstName && post.author?.lastName 
                                     ? `${post.author.firstName[0]}${post.author.lastName[0]}` 
                                     : post.author?.name && typeof post.author.name === 'string' ? post.author.name.split(' ').map(n => n[0]).join('') : 'U'}
@@ -661,17 +820,14 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
               <h3>Friend List</h3>
               {friends.length > 0 ? (
                 <div className="friends-list">
-                  {friends.map((friendId) => {
-                    const friendUser = allUsers.find(u => u.id === friendId);
-                    if (!friendUser) return null;
-                    
+                  {friends.map((friend) => {
                     return (
-                      <div key={friendId} className="friend-item">
+                      <div key={friend._id || friend.id} className="friend-item">
                         <div className="friend-avatar">
-                          {friendUser.profilePicture ? (
+                          {friend.avatar ? (
                             <img 
-                              src={friendUser.profilePicture} 
-                              alt={friendUser.firstName ? `${friendUser.firstName} ${friendUser.lastName}` : friendUser.name}
+                              src={friend.avatar} 
+                              alt={friend.firstName ? `${friend.firstName} ${friend.lastName}` : friend.name}
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
@@ -680,23 +836,23 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                           ) : (
                             <img 
                               src="/api/placeholder/32/32" 
-                              alt={friendUser.firstName ? `${friendUser.firstName} ${friendUser.lastName}` : friendUser.name}
+                              alt={friend.firstName ? `${friend.firstName} ${friend.lastName}` : friend.name}
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
                             />
                           )}
-                          <div className="avatar-fallback" style={{ display: friendUser.profilePicture ? 'none' : 'flex' }}>
-                            {friendUser.firstName && friendUser.lastName 
-                              ? `${friendUser.firstName[0]}${friendUser.lastName[0]}` 
-                              : friendUser.name && typeof friendUser.name === 'string' ? friendUser.name.split(' ').map(n => n[0]).join('') : 'U'}
+                          <div className="avatar-fallback" style={{ display: friend.avatar ? 'none' : 'flex' }}>
+                            {friend.firstName && friend.lastName 
+                              ? `${friend.firstName[0]}${friend.lastName[0]}` 
+                              : friend.name && typeof friend.name === 'string' ? friend.name.split(' ').map(n => n[0]).join('') : 'U'}
                           </div>
                         </div>
                         <span className="friend-name">
-                          {friendUser.firstName && friendUser.lastName 
-                            ? `${friendUser.firstName} ${friendUser.lastName}` 
-                            : friendUser.name || 'Unknown User'}
+                          {friend.firstName && friend.lastName 
+                            ? `${friend.firstName} ${friend.lastName}` 
+                            : friend.name || 'Unknown User'}
                         </span>
                       </div>
                     );

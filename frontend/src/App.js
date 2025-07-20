@@ -103,15 +103,11 @@ function App() {
     if (currentPage === 'chat') {
       return (
         <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
-          <div className="chat-page">
-            <div className="chat-header-bar">
-              <button onClick={handleBackFromChat} className="back-button">
-                ← Quay lại
-              </button>
-              <h2>Tin nhắn</h2>
-            </div>
-            <Chat />
-          </div>
+          <Chat 
+            onNavigateToHome={handleBackFromChat}
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+          />
         </div>
       );
     }

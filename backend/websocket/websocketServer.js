@@ -38,14 +38,25 @@ export const initializeWebSocket = (server) => {
     });
 
     io.on('connection', (socket) => {
-        console.log(`User connected: ${socket.user.username} (${socket.userId})`);
+        console.log(`🔗 User connected: ${socket.user.username} (${socket.userId})`);
+        console.log(`📍 User joined room: ${socket.userId}`);
 
         // Join room với user ID để nhận tin nhắn
         socket.join(socket.userId);
 
+        // Emit user online status
+        socket.on('set_online', () => {
+            console.log(`🟢 User ${socket.user.username} is now online`);
+            socket.broadcast.emit('user_online', {
+                userId: socket.userId,
+                username: socket.user.username
+            });
+        });
+
         // Xử lý gửi tin nhắn
         socket.on('send_message', async (data) => {
             try {
+                console.log(`📤 Message received from ${socket.user.username}:`, data);
                 const { receiverId, content, image } = data;
 
                 if ((!content || content.trim() === '') && !image) {
@@ -56,9 +67,12 @@ export const initializeWebSocket = (server) => {
                 // Kiểm tra người nhận có tồn tại không
                 const receiver = await User.findById(receiverId);
                 if (!receiver) {
+                    console.log(`❌ Receiver not found: ${receiverId}`);
                     socket.emit('error', { message: 'Người nhận không tồn tại' });
                     return;
                 }
+
+                console.log(`📝 Saving message from ${socket.user.username} to ${receiver.username}`);
 
                 // Lưu tin nhắn vào database
                 const newMessage = new ChatMessage({
@@ -69,16 +83,29 @@ export const initializeWebSocket = (server) => {
                 });
 
                 await newMessage.save();
-                await newMessage.populate('sender', 'username avatar');
-                await newMessage.populate('receiver', 'username avatar');
+                await newMessage.populate('sender', 'username avatar firstName lastName');
+                await newMessage.populate('receiver', 'username avatar firstName lastName');
+
+                console.log(`💾 Message saved successfully:`, newMessage._id);
 
                 // Gửi tin nhắn đến người nhận
+                console.log(`📬 Sending to receiver room: ${receiverId}`);
                 socket.to(receiverId).emit('receive_message', {
                     message: newMessage,
                     sender: socket.user
                 });
 
+                // Emit new_message event for notification system
+                socket.to(receiverId).emit('new_message', {
+                    senderId: socket.userId,
+                    receiverId: receiverId,
+                    messageId: newMessage._id,
+                    content: content || '',
+                    senderName: `${socket.user.firstName || ''} ${socket.user.lastName || ''}`.trim() || socket.user.username
+                });
+
                 // Gửi xác nhận về cho người gửi
+                console.log(`✅ Sending confirmation to sender: ${socket.userId}`);
                 socket.emit('message_sent', {
                     message: newMessage
                 });
@@ -121,6 +148,11 @@ export const initializeWebSocket = (server) => {
                     readerName: socket.user.username
                 });
 
+                // Emit messages_read event for current user's notification system
+                socket.emit('messages_read', {
+                    userId: socket.userId
+                });
+
             } catch (error) {
                 console.error('Lỗi đánh dấu đã đọc:', error);
             }
@@ -136,7 +168,7 @@ export const initializeWebSocket = (server) => {
 
         // Xử lý disconnect
         socket.on('disconnect', () => {
-            console.log(`User disconnected: ${socket.user.username} (${socket.userId})`);
+            console.log(`🔴 User disconnected: ${socket.user.username} (${socket.userId})`);
             socket.broadcast.emit('user_offline', {
                 userId: socket.userId,
                 username: socket.user.username

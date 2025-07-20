@@ -40,11 +40,56 @@ const SignUp = ({ onNavigateLogin, onSignUp }) => {
     }
     
     try {
+      // Xử lý avatar nếu có
+      let avatarData = '';
+      if (form.picture) {
+        // Resize và convert file to base64
+        avatarData = await new Promise((resolve) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          
+          img.onload = () => {
+            // Resize to maximum 200x200 to reduce file size
+            const maxSize = 200;
+            let { width, height } = img;
+            
+            if (width > height) {
+              if (width > maxSize) {
+                height = (height * maxSize) / width;
+                width = maxSize;
+              }
+            } else {
+              if (height > maxSize) {
+                width = (width * maxSize) / height;
+                height = maxSize;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw resized image
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to base64 with compression
+            resolve(canvas.toDataURL('image/jpeg', 0.8)); // 80% quality
+          };
+          
+          img.src = URL.createObjectURL(form.picture);
+        });
+      }
+      
       // Tạo user data theo format của backend
       const userData = {
         username: `${form.firstName}${form.lastName}`.toLowerCase(),
+        firstName: form.firstName,
+        lastName: form.lastName,
         email: form.email,
-        password: form.password
+        password: form.password,
+        location: form.location || '',
+        occupation: form.occupation || '',
+        avatar: avatarData || ''
       };
       
       const response = await authAPI.register(userData);

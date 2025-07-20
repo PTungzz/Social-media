@@ -25,9 +25,9 @@ const UserProfileCard = ({ user, onViewProfile }) => {
       {/* Header Section */}
       <div className="profile-header">
         <div className="profile-avatar">
-          {user?.profilePicture ? (
+          {user?.avatar ? (
             <img 
-              src={user.profilePicture} 
+              src={user.avatar} 
               alt={profileData.name}
               onError={(e) => {
                 e.target.style.display = 'none';
@@ -44,7 +44,7 @@ const UserProfileCard = ({ user, onViewProfile }) => {
               }}
             />
           )}
-          <div className="avatar-fallback" style={{ display: user?.profilePicture ? 'none' : 'flex' }}>
+          <div className="avatar-fallback" style={{ display: user?.avatar ? 'none' : 'flex' }}>
             {profileData.name.split(' ').map(n => n[0]).join('')}
           </div>
         </div>

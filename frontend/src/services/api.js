@@ -54,6 +54,7 @@ export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     getAllUsers: () => api.get('/auth/users'),
     getCurrentUser: () => api.get('/auth/me'),
+    getUserById: (userId) => api.get(`/auth/user/${userId}`),
 };
 
 // Chat API
@@ -62,6 +63,16 @@ export const chatAPI = {
     getMessages: (userId) => api.get(`/chat/messages/${userId}`),
     getChatList: () => api.get('/chat/list'),
     markAsRead: (senderId) => api.put(`/chat/read/${senderId}`),
+    getUnreadCount: () => api.get('/chat/unread-count'),
+    markAllAsRead: () => api.put('/chat/mark-all-read'),
+};
+
+// Friends API
+export const friendsAPI = {
+    getFriends: () => api.get('/friends'),
+    addFriend: (friendId) => api.post('/friends/add', { friendId }),
+    removeFriend: (friendId) => api.delete(`/friends/${friendId}`),
+    checkFriendship: (friendId) => api.get(`/friends/check/${friendId}`),
 };
 
 // Posts API (nếu cần)

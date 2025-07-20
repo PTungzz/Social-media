@@ -176,6 +176,14 @@
   align-items: center;
   justify-content: center;
   color: white;
+  overflow: hidden;
+}
+
+.profile-avatar .user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 /* Notification Badge */
@@ -193,6 +201,47 @@
   justify-content: center;
   font-size: 10px;
   font-weight: bold;
+}
+
+/* Message Badge */
+.message-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+/* Message badge animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(255, 68, 68, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Dark mode message badge */
+.dark-mode .message-badge {
+  border-color: #2d3748;
 }
 
 /* Dropdown */

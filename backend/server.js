@@ -8,6 +8,7 @@ import { createServer } from 'http';
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import friendRoutes from './routes/friendRoutes.js';
 // import postRoutes from './routes/postRoutes.js';
 
 // Import WebSocket
@@ -18,7 +19,8 @@ dotenv.config();
 const app = express();
 
 // Middlewares
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Tăng limit cho JSON payload
+app.use(express.urlencoded({ limit: '10mb', extended: true })); // Tăng limit cho URL-encoded payload
 app.use(cookieParser());
 app.use(cors({
     origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
@@ -39,6 +41,7 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/friends', friendRoutes);
 // app.use('/api/posts', postRoutes);
 
 // MongoDB connection
