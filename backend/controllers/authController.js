@@ -145,8 +145,8 @@ export const getAllUsers = async (req, res) => {
         const currentUserId = req.user.id;
         
         const users = await User.find({ _id: { $ne: currentUserId } })
-            .select('username email avatar createdAt')
-            .sort({ username: 1 });
+            .select('username firstName lastName email avatar createdAt')
+            .sort({ firstName: 1, lastName: 1, username: 1 });
 
         res.json({
             success: true,

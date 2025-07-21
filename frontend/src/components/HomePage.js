@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import UserProfileCard from './UserProfileCard';
 import CreatePost from './CreatePost';
-import { friendsAPI, chatAPI } from '../services/api';
+import { friendsAPI, chatAPI, authAPI } from '../services/api';
 import { io } from 'socket.io-client';
 import './HomePage.css';
 import { 
@@ -25,6 +25,10 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   const [allUsers, setAllUsers] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(0); // Track unread messages count
   const [socket, setSocket] = useState(null); // WebSocket connection
+  
+  // Search functionality states
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   // Load data from localStorage and backend on component mount
   useEffect(() => {
@@ -48,8 +52,25 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
         }
       }
       
-      const loadedUsers = getAllUsers();
-      setAllUsers(loadedUsers);
+      // Load all users from backend API for search functionality
+      try {
+        const usersResponse = await authAPI.getAllUsers();
+        if (usersResponse.data.success) {
+          console.log('👥 Loaded users from backend:', usersResponse.data.users.length, 'users');
+          setAllUsers(usersResponse.data.users);
+        } else {
+          console.log('⚠️ API failed, falling back to localStorage');
+          // Fallback to localStorage if API fails
+          const loadedUsers = getAllUsers();
+          setAllUsers(loadedUsers);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load users from backend:', error);
+        console.log('⚠️ Using localStorage fallback');
+        // Fallback to localStorage
+        const loadedUsers = getAllUsers();
+        setAllUsers(loadedUsers);
+      }
       
       // Initialize post likes and comments from loaded posts
       const likes = {};
@@ -216,9 +237,71 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
 
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log('Searching for:', searchQuery);
-    // TODO: Implement search functionality
+    if (searchQuery.trim()) {
+      // Redirect to search results or implement full search
+      console.log('Performing full search for:', searchQuery);
+    }
   };
+
+  // Handle search input change with real-time filtering
+  const handleSearchInputChange = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    if (query.trim().length > 0) {
+      try {
+        // Search through all users for matching names
+        const filteredUsers = allUsers.filter(user => {
+          const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+          const username = (user.username || '').toLowerCase();
+          const searchTerm = query.toLowerCase();
+          
+          return fullName.includes(searchTerm) || username.includes(searchTerm);
+        });
+
+        // Limit to top 3 results
+        const limitedResults = filteredUsers.slice(0, 3);
+        setSearchResults(limitedResults);
+        setShowSearchDropdown(limitedResults.length > 0);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+        setShowSearchDropdown(false);
+      }
+    } else {
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+    }
+  };
+
+  // Handle clicking on a search result
+  const handleSearchResultClick = (selectedUser) => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchDropdown(false);
+    
+    // Navigate to user profile
+    const userId = selectedUser._id || selectedUser.id;
+    if (userId) {
+      onViewProfile(userId);
+    } else {
+      console.error('❌ No valid user ID found:', selectedUser);
+    }
+  };
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.search-container')) {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -400,9 +483,9 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
             <div className="search-container">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search users..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchInputChange}
                 className="search-input"
               />
               <button type="submit" className="search-button">
@@ -411,6 +494,50 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                   <path d="m21 21-4.35-4.35"></path>
                 </svg>
               </button>
+              
+              {/* Search Results Dropdown */}
+              {showSearchDropdown && searchResults.length > 0 && (
+                <div className="search-dropdown">
+                  <div className="search-results">
+                    {searchResults.map((user) => (
+                      <div
+                        key={user._id || user.id}
+                        className="search-result-item"
+                        onClick={() => handleSearchResultClick(user)}
+                      >
+                        <div className="search-result-avatar">
+                          {user.avatar ? (
+                            <img 
+                              src={user.avatar} 
+                              alt={`${user.firstName || 'User'} ${user.lastName || ''}`}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <div className="avatar-fallback">
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName[0]}${user.lastName[0]}` 
+                                : user.username ? user.username[0].toUpperCase() : 'U'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="search-result-info">
+                          <div className="search-result-name">
+                            {user.firstName && user.lastName 
+                              ? `${user.firstName} ${user.lastName}` 
+                              : user.username || 'Unknown User'}
+                          </div>
+                          {user.username && (user.firstName || user.lastName) && (
+                            <div className="search-result-username">@{user.username}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </form>
         </div>
