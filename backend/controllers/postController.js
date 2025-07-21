@@ -149,24 +149,25 @@ export const updateComment = async (req, res) => {
 // Xóa comment
 export const deleteComment = async (req, res) => {
   try {
-    const postId = req.params.postId;
-    const commentId = req.params.commentId;
-    const userId = req.user.id;
-
+    const { postId, commentId } = req.params;
     const post = await BlogPost.findById(postId);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
+    // Tìm comment
     const comment = post.comments.id(commentId);
     if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
-    if (comment.author.toString() !== userId) return res.status(403).json({ success: false, message: 'Not allowed' });
 
+    // Kiểm tra quyền xóa (chỉ cho phép chủ comment hoặc chủ post xóa)
+    if (comment.author.toString() !== req.user.id && post.author.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Xóa comment
     comment.remove();
     await post.save();
 
-    const updatedPost = await BlogPost.findById(postId)
-      .populate('comments.author', 'username firstName lastName avatar');
-    res.json({ success: true, comments: updatedPost.comments });
+    res.json({ success: true, comments: post.comments });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error });
   }
 };
