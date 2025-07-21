@@ -11,58 +11,29 @@ const setupDatabase = async () => {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB');
 
-        // Xóa tất cả users cũ (optional)
-        await User.deleteMany({});
-        console.log('🗑️ Cleared existing users');
-
         // Tạo admin user
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('123456', salt);
 
-        const adminUser = new User({
-            username: 'admin',
-            email: 'admin@sociopedia.com',
-            password: hashedPassword,
-            avatar: ''
-        });
-
-        await adminUser.save();
-        console.log('👤 Created admin user: admin@sociopedia.com / 123456');
-
-        // Tạo một số user mẫu
-        const sampleUsers = [
-            {
-                username: 'john_doe',
-                email: 'john@example.com',
+        // Kiểm tra xem admin user đã tồn tại chưa
+        const existingAdmin = await User.findOne({ email: 'admin@sociopedia.com' });
+        if (!existingAdmin) {
+            const adminUser = new User({
+                username: 'admin',
+                email: 'admin@sociopedia.com',
                 password: hashedPassword,
                 avatar: ''
-            },
-            {
-                username: 'jane_smith',
-                email: 'jane@example.com',
-                password: hashedPassword,
-                avatar: ''
-            },
-            {
-                username: 'mike_wilson',
-                email: 'mike@example.com',
-                password: hashedPassword,
-                avatar: ''
-            }
-        ];
+            });
 
-        for (const userData of sampleUsers) {
-            const user = new User(userData);
-            await user.save();
-            console.log(`👤 Created user: ${userData.email} / 123456`);
+            await adminUser.save();
+            console.log('👤 Created admin user: admin@sociopedia.com / 123456');
+        } else {
+            console.log('👤 Admin user already exists: admin@sociopedia.com');
         }
 
         console.log('✅ Database setup completed!');
-        console.log('\n📋 Sample accounts:');
+        console.log('\n📋 Available account:');
         console.log('- admin@sociopedia.com / 123456');
-        console.log('- john@example.com / 123456');
-        console.log('- jane@example.com / 123456');
-        console.log('- mike@example.com / 123456');
 
     } catch (error) {
         console.error('❌ Database setup failed:', error);
