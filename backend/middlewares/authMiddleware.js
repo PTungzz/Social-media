@@ -8,7 +8,7 @@ export const verifyToken = (req, res, next) => {
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.userId;
+        req.user = { id: decoded.id || decoded.userId }; // Đảm bảo luôn có req.user.id
         next();
     } catch (err) {
         return res.status(401).json({ message: 'Invalid or expired token' });

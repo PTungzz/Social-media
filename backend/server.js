@@ -4,12 +4,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
+import path from 'path';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import friendRoutes from './routes/friendRoutes.js';
-// import postRoutes from './routes/postRoutes.js';
+import postRoutes from './routes/postRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/websocketServer.js';
@@ -29,6 +30,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Cho phép truy cập file ảnh tĩnh trong thư mục uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -42,7 +46,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/friends', friendRoutes);
-// app.use('/api/posts', postRoutes);
+app.use('/api/posts', postRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
