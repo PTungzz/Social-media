@@ -118,3 +118,55 @@ export const addComment = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+// Thêm comment (đã có addComment)
+// Sửa comment
+export const updateComment = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const commentId = req.params.commentId;
+    const userId = req.user.id;
+    const { text } = req.body;
+
+    const post = await BlogPost.findById(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+    if (comment.author.toString() !== userId) return res.status(403).json({ success: false, message: 'Not allowed' });
+
+    comment.text = text;
+    await post.save();
+
+    const updatedPost = await BlogPost.findById(postId)
+      .populate('comments.author', 'username firstName lastName avatar');
+    res.json({ success: true, comment, comments: updatedPost.comments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Xóa comment
+export const deleteComment = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const commentId = req.params.commentId;
+    const userId = req.user.id;
+
+    const post = await BlogPost.findById(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+    if (comment.author.toString() !== userId) return res.status(403).json({ success: false, message: 'Not allowed' });
+
+    comment.remove();
+    await post.save();
+
+    const updatedPost = await BlogPost.findById(postId)
+      .populate('comments.author', 'username firstName lastName avatar');
+    res.json({ success: true, comments: updatedPost.comments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
