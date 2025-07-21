@@ -13,7 +13,7 @@
 
 /* Profile Header */
 .profile-header {
-  padding: 20px;
+  padding: 20px 20px 20px 20px;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -26,6 +26,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  margin: 20px 0 0 0;
 }
 
 .profile-avatar img {
@@ -54,7 +55,7 @@
   font-size: 18px;
   font-weight: 600;
   color: #333333;
-  margin: 0 0 4px 0;
+  margin: 20px 0 4px 0;
 }
 
 .profile-friends {

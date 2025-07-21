@@ -3,7 +3,6 @@ import './CreatePost.css';
 
 const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
   const [postContent, setPostContent] = useState('');
-  const [showActions, setShowActions] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
 
   const handleSubmit = (e) => {
@@ -11,27 +10,11 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
     if (postContent.trim() || attachedFiles.length > 0) {
       onCreatePost({
         content: postContent,
-        timestamp: new Date(),
-        author: user,
         attachments: attachedFiles
       });
       setPostContent('');
       setAttachedFiles([]);
-      setShowActions(false);
     }
-  };
-
-  const handleInputFocus = () => {
-    setShowActions(true);
-  };
-
-  const handleInputBlur = () => {
-    // Delay hiding actions to allow clicking on buttons
-    setTimeout(() => {
-      if (!postContent.trim() && attachedFiles.length === 0) {
-        setShowActions(false);
-      }
-    }, 200);
   };
 
   const handleFileUpload = (fileType, acceptedTypes) => {
@@ -52,7 +35,6 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
       }));
       
       setAttachedFiles(prev => [...prev, ...newFiles]);
-      setShowActions(true);
     };
     
     document.body.appendChild(input);
@@ -147,8 +129,6 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
             placeholder="What's on your mind..."
             value={postContent}
             onChange={(e) => setPostContent(e.target.value)}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
             className="post-input"
             rows="3"
           />
@@ -189,7 +169,7 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
         </div>
       )}
 
-      <div className={`create-post-actions ${showActions ? 'show' : ''}`}>
+      <div className="create-post-actions">
         <div className="media-actions">
           <button 
             className="action-btn image-btn" 
