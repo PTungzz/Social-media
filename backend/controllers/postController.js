@@ -1,0 +1,120 @@
+import BlogPost from '../models/BlogPost.js';
+import path from 'path';
+
+export const createPost = async (req, res) => {
+    try {
+        const { content } = req.body;
+        const author = req.user.id;
+
+        let imagePath = '';
+        if (req.file) {
+            imagePath = '/uploads/' + req.file.filename;
+        }
+
+        // Log để debug
+        console.log('req.user:', req.user);
+        console.log('req.file:', req.file);
+        console.log('content:', content);
+
+        const newPost = new BlogPost({
+            author,
+            content,
+            image: imagePath
+        });
+
+        await newPost.save();
+        const populatedPost = await BlogPost.findById(newPost._id)
+            .populate('author', 'username firstName lastName avatar')
+            .populate('comments.author', 'username firstName lastName avatar');
+
+        res.status(201).json({
+            success: true,
+            post: {
+                ...populatedPost._doc,
+                createdAt: populatedPost.createdAt ? populatedPost.createdAt.toISOString() : null
+            }
+        });
+    } catch (error) {
+        console.error('Lỗi tạo bài viết:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+// Lấy danh sách bài viết
+export const getPosts = async (req, res) => {
+    try {
+        const posts = await BlogPost.find()
+            .populate('author', 'username firstName lastName avatar')
+            .populate('comments.author', 'username firstName lastName avatar')
+            .sort({ createdAt: -1 });
+        const postsWithDate = posts.map(post => ({
+            ...post._doc,
+            createdAt: post.createdAt ? post.createdAt.toISOString() : null
+        }));
+        res.json({ success: true, posts: postsWithDate });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+export const likePost = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const userId = req.user.id;
+
+    const post = await BlogPost.findById(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    if (!post.likes.includes(userId)) {
+      post.likes.push(userId);
+      await post.save();
+    }
+
+    res.json({ success: true, likes: post.likes.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const unlikePost = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const userId = req.user.id;
+
+    const post = await BlogPost.findById(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    post.likes = post.likes.filter(id => id.toString() !== userId);
+    await post.save();
+
+    res.json({ success: true, likes: post.likes.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const addComment = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const userId = req.user.id;
+    const { text } = req.body;
+
+    const post = await BlogPost.findById(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const comment = {
+      author: userId,
+      text,
+      createdAt: new Date()
+    };
+    post.comments.push(comment);
+    await post.save();
+
+    const updatedPost = await BlogPost.findById(postId)
+      .populate('comments.author', 'username firstName lastName avatar');
+
+    res.json({ success: true, comment, comments: updatedPost.comments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
