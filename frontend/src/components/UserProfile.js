@@ -24,12 +24,58 @@ const UserProfile = () => {
   const [userPosts, setUserPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [commentInputs, setCommentInputs] = useState({});
+  const [showComments, setShowComments] = useState({});
   const [isDarkMode] = useState(
     document.body.classList.contains('dark-mode')
   );
 
   const handleGoBack = () => {
     navigate(-1); // Quay lại trang trước
+  };
+
+  // Handle like post
+  const handleLikePost = async (postId) => {
+    try {
+      const response = await postsAPI.likePost(postId);
+      if (response.data.success) {
+        setUserPosts(prevPosts => 
+          prevPosts.map(post => 
+            post._id === postId 
+              ? { ...post, likes: response.data.likes, likesCount: response.data.likesCount }
+              : post
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  // Handle add comment
+  const handleAddComment = async (postId) => {
+    const commentText = commentInputs[postId];
+    if (!commentText || !commentText.trim()) return;
+
+    try {
+      const response = await postsAPI.addComment(postId, { content: commentText });
+      if (response.data.success) {
+        setUserPosts(prevPosts => 
+          prevPosts.map(post => 
+            post._id === postId 
+              ? { ...post, comments: response.data.comments }
+              : post
+          )
+        );
+        setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   useEffect(() => {
@@ -40,18 +86,24 @@ const UserProfile = () => {
         
         console.log('🔍 Fetching user data for userId:', userId);
         
-        // Fetch user info
-        const userResponse = await authAPI.getUserById(userId);
+        // Fetch user info and posts in parallel - NO CACHE, NO LAZY LOADING
+        const [userResponse, postsResponse] = await Promise.all([
+          authAPI.getUserById(userId),
+          postsAPI.getUserPosts(userId)
+        ]);
+        
         console.log('👤 User response:', userResponse.data);
         if (userResponse.data && userResponse.data.success) {
           setUserInfo(userResponse.data.user);
         }
-
-        // Fetch user posts
-        const postsResponse = await postsAPI.getUserPosts(userId);
+        
         console.log('📝 Posts response:', postsResponse.data);
         if (postsResponse.data && postsResponse.data.success) {
+          console.log('📊 Found posts:', postsResponse.data.posts.length);
           setUserPosts(postsResponse.data.posts);
+        } else {
+          console.log('❌ No posts found or request failed');
+          setUserPosts([]);
         }
 
       } catch (error) {
@@ -131,7 +183,11 @@ const UserProfile = () => {
                             {post.author?.avatar ? (
                               <img 
                                 src={post.author.avatar} 
-                                alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
+                                alt={userInfo?.firstName && userInfo?.lastName 
+                                  ? `${userInfo.firstName} ${userInfo.lastName}` 
+                                  : post.author?.firstName && post.author?.lastName 
+                                    ? `${post.author.firstName} ${post.author.lastName}` 
+                                    : 'User'}
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'flex';
@@ -139,8 +195,10 @@ const UserProfile = () => {
                               />
                             ) : (
                               <img 
-                                src="/api/placeholder/32/32" 
-                                alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
+                                src={userInfo?.avatar || "/api/placeholder/32/32"} 
+                                alt={userInfo?.firstName && userInfo?.lastName 
+                                  ? `${userInfo.firstName} ${userInfo.lastName}` 
+                                  : 'User'}
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'flex';
@@ -148,16 +206,23 @@ const UserProfile = () => {
                               />
                             )}
                             <div className="avatar-fallback" style={{ display: post.author?.avatar ? 'none' : 'flex' }}>
-                              {post.author?.firstName && post.author?.lastName 
-                                ? `${post.author.firstName[0]}${post.author.lastName[0]}` 
-                                : post.author?.name && typeof post.author.name === 'string' ? post.author.name.split(' ').map(n => n[0]).join('') : 'U'}
+                              {/* Use userInfo for fallback avatar text */}
+                              {userInfo?.firstName && userInfo?.lastName 
+                                ? `${userInfo.firstName[0]}${userInfo.lastName[0]}` 
+                                : post.author?.firstName && post.author?.lastName 
+                                  ? `${post.author.firstName[0]}${post.author.lastName[0]}` 
+                                  : post.author?.username ? post.author.username[0].toUpperCase() 
+                                  : userInfo?.username ? userInfo.username[0].toUpperCase() : 'U'}
                             </div>
                           </div>
                           <div className="author-info">
                             <strong className="author-name-clickable">
-                              {post.author?.firstName && post.author?.lastName 
-                                ? `${post.author.firstName} ${post.author.lastName}` 
-                                : post.author?.name || 'Unknown User'}
+                              {/* Prioritize userInfo (current profile owner) over post.author data */}
+                              {userInfo?.firstName && userInfo?.lastName 
+                                ? `${userInfo.firstName} ${userInfo.lastName}` 
+                                : post.author?.firstName && post.author?.lastName 
+                                  ? `${post.author.firstName} ${post.author.lastName}` 
+                                  : post.author?.username || userInfo?.username || 'User'}
                             </strong>
                             <small>{post.createdAt ? new Date(post.createdAt).toLocaleString() : 'Just now'}</small>
                           </div>
@@ -186,13 +251,19 @@ const UserProfile = () => {
                       
                       {/* Post Actions */}
                       <div className="post-actions">
-                        <button className="action-btn like-btn">
+                        <button 
+                          className={`action-btn like-btn ${post.likes?.includes(currentUser?.id) ? 'liked' : ''}`}
+                          onClick={() => handleLikePost(post._id)}
+                        >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                           </svg>
                           Like {post.likes?.length > 0 && `(${post.likes.length})`}
                         </button>
-                        <button className="action-btn comment-btn">
+                        <button 
+                          className="action-btn comment-btn"
+                          onClick={() => toggleComments(post._id)}
+                        >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                           </svg>
@@ -210,8 +281,37 @@ const UserProfile = () => {
                         </button>
                       </div>
 
+                      {/* Comment Input */}
+                      {showComments[post._id] && (
+                        <div className="comment-input-section">
+                          <div className="comment-input">
+                            <img 
+                              src={currentUser?.avatar || "/api/placeholder/32/32"} 
+                              alt={currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : 'You'}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Viết bình luận..."
+                              value={commentInputs[post._id] || ''}
+                              onChange={(e) => setCommentInputs(prev => ({ ...prev, [post._id]: e.target.value }))}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAddComment(post._id);
+                                }
+                              }}
+                            />
+                            <button 
+                              onClick={() => handleAddComment(post._id)}
+                              disabled={!commentInputs[post._id]?.trim()}
+                            >
+                              Gửi
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Comments List */}
-                      {post.comments && post.comments.length > 0 && (
+                      {(showComments[post._id] || post.comments?.length > 0) && post.comments && post.comments.length > 0 && (
                         <div className="comments-list">
                           {post.comments.slice(0, 3).map((comment, commentIndex) => (
                             <div key={comment._id || comment.id || `comment-${commentIndex}`} className="comment-item">

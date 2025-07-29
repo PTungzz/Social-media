@@ -1,4 +1,5 @@
 import BlogPost from '../models/BlogPost.js';
+import { createNotification } from './notificationController.js';
 import path from 'path';
 
 export const createPost = async (req, res) => {
@@ -66,6 +67,7 @@ export const getUserPosts = async (req, res) => {
         console.log(`📊 Fetching posts for user: ${userId}`);
         const startTime = Date.now();
         
+        // Get ALL posts for the user - no limit to ensure no posts are missing
         const posts = await BlogPost.find({ author: userId })
             .populate('author', 'username firstName lastName avatar')
             .populate({
@@ -82,11 +84,10 @@ export const getUserPosts = async (req, res) => {
                     select: 'username firstName lastName avatar'
                 }
             })
-            .sort({ createdAt: -1 })
-            .limit(20); // Limit số posts để tăng speed
+            .sort({ createdAt: -1 }); // No limit - show ALL posts
             
         const endTime = Date.now();
-        console.log(`⏱️ Posts query took: ${endTime - startTime}ms`);
+        console.log(`⏱️ Posts query took: ${endTime - startTime}ms - Found ${posts.length} posts`);
         
         const postsWithDate = posts.map(post => ({
             ...post._doc,
@@ -111,6 +112,17 @@ export const likePost = async (req, res) => {
     if (!post.likes.includes(userId)) {
       post.likes.push(userId);
       await post.save();
+
+      // Create notification for post author (if not self-like)
+      if (post.author.toString() !== userId) {
+        await createNotification({
+          recipient: post.author,
+          sender: userId,
+          type: 'like',
+          postId: postId,
+          message: 'liked your post'
+        });
+      }
     }
 
     res.json({ success: true, likes: post.likes.length });
@@ -152,6 +164,17 @@ export const addComment = async (req, res) => {
     };
     post.comments.push(comment);
     await post.save();
+
+    // Create notification for post author (if not self-comment)
+    if (post.author.toString() !== userId) {
+      await createNotification({
+        recipient: post.author,
+        sender: userId,
+        type: 'comment',
+        postId: postId,
+        message: 'commented on your post'
+      });
+    }
 
     const updatedPost = await BlogPost.findById(postId)
       .populate('comments.author', 'username firstName lastName avatar');
@@ -234,6 +257,18 @@ export const likeComment = async (req, res) => {
     if (!comment.likes.includes(userId)) {
       comment.likes.push(userId);
       await post.save();
+
+      // Create notification for comment author (if not self-like)
+      if (comment.author.toString() !== userId) {
+        await createNotification(
+          comment.author,
+          userId,
+          'like',
+          postId,
+          commentId,
+          'liked your comment'
+        );
+      }
     }
 
     res.json({ success: true, likes: comment.likes.length });
@@ -282,6 +317,18 @@ export const replyToComment = async (req, res) => {
 
     comment.replies.push(reply);
     await post.save();
+
+    // Create notification for comment author (if not self-reply)
+    if (comment.author.toString() !== userId) {
+      await createNotification({
+        recipient: comment.author,
+        sender: userId,
+        type: 'reply',
+        postId: postId,
+        commentId: commentId,
+        message: 'replied to your comment'
+      });
+    }
 
     const updatedPost = await BlogPost.findById(postId)
       .populate('comments.author', 'username firstName lastName avatar')

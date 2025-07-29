@@ -1,5 +1,6 @@
 import Friend from '../models/Friend.js';
 import User from '../models/User.js';
+import { createNotification } from './notificationController.js';
 
 // Thêm bạn bè
 export const addFriend = async (req, res) => {
@@ -45,6 +46,14 @@ export const addFriend = async (req, res) => {
             { user: friendId, friend: userId }
         ]);
 
+        // Tạo notification cho người được thêm
+        await createNotification({
+            recipient: friendId,
+            sender: userId,
+            type: 'friend_accept',
+            message: 'is now your friend'
+        });
+
         console.log(`✅ Friend relationship created: ${userId} <-> ${friendId}`);
 
         res.json({
@@ -68,14 +77,18 @@ export const getFriends = async (req, res) => {
         const userId = req.user.id;
 
         console.log(`📋 Getting friends for user: ${userId}`);
+        const startTime = Date.now();
 
+        // Optimized query - only select necessary fields
         const friends = await Friend.find({ user: userId })
-            .populate('friend', 'firstName lastName username email avatar location occupation')
-            .sort({ createdAt: -1 });
+            .populate('friend', 'firstName lastName username avatar')
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean for better performance
 
         const friendsList = friends.map(f => f.friend);
 
-        console.log(`📊 Found ${friendsList.length} friends`);
+        const endTime = Date.now();
+        console.log(`📊 Found ${friendsList.length} friends in ${endTime - startTime}ms`);
 
         res.json({
             success: true,

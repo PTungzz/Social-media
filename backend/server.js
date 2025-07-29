@@ -11,6 +11,7 @@ import authRoutes from './routes/authRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import friendRoutes from './routes/friendRoutes.js';
 import postRoutes from './routes/postRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/websocketServer.js';
@@ -47,6 +48,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

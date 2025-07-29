@@ -110,4 +110,13 @@ export const postsAPI = {
     deleteReply: (postId, commentId, replyId) => api.delete(`/posts/${postId}/comments/${commentId}/reply/${replyId}`),
 };
 
+// Notification API
+export const notificationAPI = {
+    getNotifications: (page = 1, limit = 20) => api.get(`/notifications?page=${page}&limit=${limit}`),
+    markAsRead: (notificationId) => api.put(`/notifications/${notificationId}/read`),
+    markAllAsRead: () => api.put('/notifications/mark-all-read'),
+    deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
+    getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
 export default api; 

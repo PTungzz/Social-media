@@ -2,20 +2,50 @@ import React, { useState, useEffect } from 'react';
 import './UserProfileCard.css';
 import { friendsAPI } from '../services/api';
 
+// Cache for friends count
+const friendsCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const UserProfileCard = ({ user, onViewProfile }) => {
   const [friendsCount, setFriendsCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  // Get friends count from API
+  // Get friends count from API with caching optimization
   useEffect(() => {
     const fetchFriendsCount = async () => {
+      const cacheKey = 'current_user_friends';
+      const cachedData = friendsCache.get(cacheKey);
+      
+      // Check if we have valid cached data
+      if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+        setFriendsCount(cachedData.count);
+        return;
+      }
+
       try {
+        setLoading(true);
         const response = await friendsAPI.getFriends();
         if (response.data.success) {
-          setFriendsCount(response.data.friends.length);
+          const count = response.data.friends.length;
+          
+          // Cache the result
+          friendsCache.set(cacheKey, {
+            count,
+            timestamp: Date.now()
+          });
+          
+          setFriendsCount(count);
         }
       } catch (error) {
         console.error('Error fetching friends:', error);
-        setFriendsCount(0);
+        // Use cached data if available, even if expired
+        if (cachedData) {
+          setFriendsCount(cachedData.count);
+        } else {
+          setFriendsCount(0);
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -29,8 +59,6 @@ const UserProfileCard = ({ user, onViewProfile }) => {
     friends: friendsCount,
     location: user?.location || 'Unknown Location',
     occupation: user?.occupation || 'Unknown Occupation',
-    profileViews: Math.floor(Math.random() * 20000) + 5000, // Random but consistent-looking
-    postImpressions: Math.floor(Math.random() * 100000) + 10000,
     socialProfiles: [
       { name: 'Twitter', platform: 'Social Network', icon: '🐦' },
       { name: 'LinkedIn', platform: 'Network Platform', icon: '💼' }
@@ -89,20 +117,6 @@ const UserProfileCard = ({ user, onViewProfile }) => {
             <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
           <span>{profileData.occupation}</span>
-        </div>
-      </div>
-
-      <div className="profile-divider"></div>
-
-      {/* Stats Section */}
-      <div className="profile-stats">
-        <div className="stat-item">
-          <span className="stat-label">Who's viewed your profile</span>
-          <span className="stat-value">{profileData.profileViews.toLocaleString()}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Impressions of your post</span>
-          <span className="stat-value">{profileData.postImpressions.toLocaleString()}</span>
         </div>
       </div>
 

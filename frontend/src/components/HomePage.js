@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserProfileCard from './UserProfileCard';
 import CreatePost from './CreatePost';
-import { friendsAPI, chatAPI, authAPI, postsAPI } from '../services/api';
+import NotificationDropdown from './NotificationDropdown';
+import { friendsAPI, chatAPI, authAPI, postsAPI, notificationAPI } from '../services/api';
 import { io } from 'socket.io-client';
 import './HomePage.css';
 
@@ -22,12 +23,18 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
   const [userLikedComments, setUserLikedComments] = useState({}); // Track which comments user has liked
   const [replyText, setReplyText] = useState({}); // Track reply input text
   const [showReplyInput, setShowReplyInput] = useState({}); // Track which comment reply input is shown
+  const [showNestedReplyInput, setShowNestedReplyInput] = useState({}); // Track nested reply inputs
+  const [nestedReplyText, setNestedReplyText] = useState({}); // Track nested reply text
   const [editingReplyId, setEditingReplyId] = useState(null); // Track which reply is being edited
   const [editReplyText, setEditReplyText] = useState(''); // Track edit reply text
   const [posts, setPosts] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(0); // Track unread messages count
+  const [unreadNotifications, setUnreadNotifications] = useState(0); // Track unread notifications count
   const [socket, setSocket] = useState(null); // WebSocket connection
+  // Loading states
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
   
   // Search functionality states
   const [searchResults, setSearchResults] = useState([]);
@@ -39,6 +46,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
       // Load posts from backend API
       if (user?.id || user?._id) {
         try {
+          setIsLoadingPosts(true);
           const postsResponse = await postsAPI.getPosts();
           if (postsResponse.data.success) {
             console.log('📝 Loaded posts from backend:', postsResponse.data.posts.length, 'posts');
@@ -80,12 +88,15 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
         } catch (error) {
           console.error('❌ Failed to load posts from backend:', error);
           setPosts([]);
+        } finally {
+          setIsLoadingPosts(false);
         }
       }
       
       // Load friends from backend API only - no localStorage involvement
       if (user?.id || user?._id) {
         try {
+          setIsLoadingFriends(true);
           const response = await friendsAPI.getFriends();
           if (response.data.success) {
             // Store complete friend objects (not just IDs)
@@ -96,6 +107,8 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
         } catch (error) {
           console.error('❌ Failed to load friends from backend:', error);
           setFriends([]);
+        } finally {
+          setIsLoadingFriends(false);
         }
       }
       
@@ -117,6 +130,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
     
     loadData();
     loadUnreadMessages();
+    loadUnreadNotifications();
   }, [user?.id]);
 
   // Load unread messages count
@@ -145,6 +159,18 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
   const updateUnreadMessages = (count) => {
     setUnreadMessages(count);
     localStorage.setItem(`unreadMessages_${user.id || user._id}`, count.toString());
+  };
+
+  // Function to load unread notifications count
+  const loadUnreadNotifications = async () => {
+    try {
+      const response = await notificationAPI.getUnreadCount();
+      if (response.data.success) {
+        setUnreadNotifications(response.data.count);
+      }
+    } catch (error) {
+      console.error('Error loading unread notifications:', error);
+    }
   };
 
   // Function to clear unread messages when user opens chat
@@ -230,37 +256,6 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [unreadMessages]);
-
-  const notifications = [
-    {
-      id: 1,
-      type: 'friend_request',
-      message: 'John Doe sent you a friend request',
-      time: '2 hours ago',
-      isUnread: true
-    },
-    {
-      id: 2,
-      type: 'like',
-      message: 'Sarah liked your post',
-      time: '4 hours ago',
-      isUnread: true
-    },
-    {
-      id: 3,
-      type: 'comment',
-      message: 'Mike commented on your post',
-      time: '6 hours ago',
-      isUnread: false
-    },
-    {
-      id: 4,
-      type: 'share',
-      message: 'Alex shared your post',
-      time: '1 day ago',
-      isUnread: false
-    }
-  ];
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -349,9 +344,6 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
     switch(action) {
       case 'view':
         handleViewProfile(user.id);
-        break;
-      case 'edit':
-        console.log('Edit profile');
         break;
       case 'logout':
         onLogout();
@@ -909,34 +901,17 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
               </svg>
-              {notifications.filter(n => n.isUnread).length > 0 && (
+              {unreadNotifications > 0 && (
                 <span className="notification-badge">
-                  {notifications.filter(n => n.isUnread).length}
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
                 </span>
               )}
             </button>
             
-            {showNotifications && (
-              <div className="dropdown-menu notifications-dropdown">
-                <div className="dropdown-header">
-                  <h3>Notifications</h3>
-                </div>
-                <div className="notifications-list">
-                  {notifications.map(notification => (
-                    <div 
-                      key={notification.id} 
-                      className={`notification-item ${notification.isUnread ? 'unread' : ''}`}
-                    >
-                      <div className="notification-content">
-                        <span className="notification-message">{notification.message}</span>
-                        <span className="notification-time">{notification.time}</span>
-                      </div>
-                      {notification.isUnread && <div className="unread-dot"></div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <NotificationDropdown 
+              isOpen={showNotifications}
+              onClose={() => setShowNotifications(false)}
+            />
           </div>
 
           {/* Profile Menu */}
@@ -976,16 +951,6 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                   View Profile
-                </button>
-                <button 
-                  className="dropdown-item"
-                  onClick={() => handleProfileAction('edit')}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                  Edit Profile
                 </button>
                 <hr className="dropdown-divider" />
                 <button 
@@ -1027,7 +992,12 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
             {/* News Feed Section */}
             <div className="news-feed-section">
               <div className="news-feed-container">
-                {posts.length > 0 ? (
+                {isLoadingPosts ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Loading posts...</p>
+                  </div>
+                ) : posts.length > 0 ? (
                   <div className="posts-list">
                     {posts.map((post, index) => (
                       <div key={index} className="post-container">
@@ -1481,7 +1451,12 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat 
             </div>
             <div className="sidebar-widget">
               <h3>Friend List</h3>
-              {friends.length > 0 ? (
+              {isLoadingFriends ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading friends...</p>
+                </div>
+              ) : friends.length > 0 ? (
                 <div className="friends-list">
                   {friends.map((friend) => {
                     return (
