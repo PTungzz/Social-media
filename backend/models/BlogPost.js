@@ -10,6 +10,14 @@ const blogPostSchema = new mongoose.Schema({
         {
             author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
             text: String,
+            likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+            replies: [
+                {
+                    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                    text: String,
+                    createdAt: { type: Date, default: Date.now }
+                }
+            ],
             createdAt: { type: Date, default: Date.now }
         }
     ],

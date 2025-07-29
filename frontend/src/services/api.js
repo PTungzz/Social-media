@@ -78,12 +78,36 @@ export const friendsAPI = {
 // Posts API (nếu cần)
 export const postsAPI = {
     getPosts: () => api.get('/posts'),
-    createPost: (postData) => api.post('/posts', postData),
+    getUserPosts: (userId) => api.get(`/posts/user/${userId}`),
+    createPost: (postData) => {
+        console.log('🔗 API createPost called with:', postData);
+        console.log('🔑 Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
+        
+        if (postData.image) {
+            const formData = new FormData();
+            formData.append('content', postData.content);
+            formData.append('image', postData.image);
+            console.log('📎 Sending with FormData (image included)');
+            return api.post('/posts', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+        } else {
+            console.log('📄 Sending with JSON (text only)');
+            return api.post('/posts', { content: postData.content });
+        }
+    },
     updatePost: (postId, postData) => api.put(`/posts/${postId}`, postData),
     deletePost: (postId) => api.delete(`/posts/${postId}`),
     likePost: (postId) => api.post(`/posts/${postId}/like`),
     unlikePost: (postId) => api.delete(`/posts/${postId}/like`),
     addComment: (postId, commentData) => api.post(`/posts/${postId}/comments`, commentData),
+    updateComment: (postId, commentId, commentData) => api.put(`/posts/${postId}/comments/${commentId}`, commentData),
+    deleteComment: (postId, commentId) => api.delete(`/posts/${postId}/comments/${commentId}`),
+    likeComment: (postId, commentId) => api.post(`/posts/${postId}/comments/${commentId}/like`),
+    unlikeComment: (postId, commentId) => api.delete(`/posts/${postId}/comments/${commentId}/like`),
+    replyToComment: (postId, commentId, replyData) => api.post(`/posts/${postId}/comments/${commentId}/reply`, replyData),
+    updateReply: (postId, commentId, replyId, replyData) => api.put(`/posts/${postId}/comments/${commentId}/reply/${replyId}`, replyData),
+    deleteReply: (postId, commentId, replyId) => api.delete(`/posts/${postId}/comments/${commentId}/reply/${replyId}`),
 };
 
 export default api; 

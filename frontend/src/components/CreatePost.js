@@ -10,7 +10,7 @@ const CreatePost = ({ user, onCreatePost, isDarkMode }) => {
     if (postContent.trim() || attachedFiles.length > 0) {
       onCreatePost({
         content: postContent,
-        attachments: attachedFiles
+        image: attachedFiles.length > 0 ? attachedFiles[0].file : null
       });
       setPostContent('');
       setAttachedFiles([]);

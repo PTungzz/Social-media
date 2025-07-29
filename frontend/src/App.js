@@ -1,31 +1,38 @@
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import HomePage from './components/HomePage';
 import UserProfile from './components/UserProfile';
 import Chat from './components/Chat';
 import './App.css';
-import { saveUser, getUser, logout, initializeSampleData } from './utils/localStorage';
+import { authAPI } from './services/api';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Initialize app and check for existing user session
   useEffect(() => {
-    // Initialize sample data on first run
-    initializeSampleData();
+    // Check for existing user session from localStorage token
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
     
-    // Check for existing user session
-    const existingUser = getUser();
-    if (existingUser) {
-      setCurrentUser(existingUser);
-      setIsLoggedIn(true);
-      setCurrentPage('home');
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData);
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+        setCurrentPage('home');
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
@@ -44,8 +51,7 @@ function App() {
     setIsLoggedIn(true);
     setCurrentPage('home');
     
-    // Save user session to localStorage
-    saveUser(userData);
+    // User session is already saved by Login component
   };
 
   const handleSignUp = (userData) => {
@@ -54,28 +60,17 @@ function App() {
     setIsLoggedIn(true);
     setCurrentPage('home');
     
-    // Save user session to localStorage
-    saveUser(userData);
+    // User session is already saved by SignUp component
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser(null);
     setCurrentPage('login');
-    setSelectedUserId(null);
     
     // Clear user session from localStorage
-    logout();
-  };
-
-  const handleViewProfile = (userId) => {
-    setSelectedUserId(userId);
-    setCurrentPage('profile');
-  };
-
-  const handleBackToHome = () => {
-    setCurrentPage('home');
-    setSelectedUserId(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   const handleNavigateToChat = () => {
@@ -87,19 +82,6 @@ function App() {
   };
 
   if (isLoggedIn) {
-    if (currentPage === 'profile' && selectedUserId) {
-      return (
-        <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
-          <UserProfile 
-            userId={selectedUserId}
-            currentUser={currentUser}
-            onBack={handleBackToHome}
-            isDarkMode={isDarkMode}
-          />
-        </div>
-      );
-    }
-    
     if (currentPage === 'chat') {
       return (
         <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
@@ -113,16 +95,29 @@ function App() {
     }
     
     return (
-      <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
-        <HomePage 
-          onLogout={handleLogout} 
-          user={currentUser}
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
-          onViewProfile={handleViewProfile}
-          onNavigateToChat={handleNavigateToChat}
-        />
-      </div>
+      <Router>
+        <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                <HomePage 
+                  onLogout={handleLogout} 
+                  user={currentUser}
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                  onNavigateToChat={handleNavigateToChat}
+                />
+              } 
+            />
+            <Route 
+              path="/profile/:userId" 
+              element={<UserProfile />} 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </Router>
     );
   }
 

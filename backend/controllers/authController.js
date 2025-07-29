@@ -163,7 +163,13 @@ export const getUserById = async (req, res) => {
     try {
         const { userId } = req.params;
         
+        console.log(`👤 Fetching user: ${userId}`);
+        const startTime = Date.now();
+        
         const user = await User.findById(userId).select('-password');
+        
+        const endTime = Date.now();
+        console.log(`⏱️ User query took: ${endTime - startTime}ms`);
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -184,7 +190,7 @@ export const getUserById = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get user by ID error:', error);
+        console.error('❌ Get user by ID error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

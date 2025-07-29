@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './UserProfileCard.css';
-import { getFriends } from '../utils/localStorage';
+import { friendsAPI } from '../services/api';
 
 const UserProfileCard = ({ user, onViewProfile }) => {
-  // Get real user data from localStorage
-  const userFriends = getFriends(user?.id);
+  const [friendsCount, setFriendsCount] = useState(0);
+
+  // Get friends count from API
+  useEffect(() => {
+    const fetchFriendsCount = async () => {
+      try {
+        const response = await friendsAPI.getFriends();
+        if (response.data.success) {
+          setFriendsCount(response.data.friends.length);
+        }
+      } catch (error) {
+        console.error('Error fetching friends:', error);
+        setFriendsCount(0);
+      }
+    };
+
+    fetchFriendsCount();
+  }, []);
+
   const profileData = {
     name: user?.firstName && user?.lastName 
       ? `${user.firstName} ${user.lastName}` 
       : user?.name || 'User',
-    friends: userFriends.length,
+    friends: friendsCount,
     location: user?.location || 'Unknown Location',
     occupation: user?.occupation || 'Unknown Occupation',
     profileViews: Math.floor(Math.random() * 20000) + 5000, // Random but consistent-looking
@@ -34,17 +51,10 @@ const UserProfileCard = ({ user, onViewProfile }) => {
                 e.target.nextSibling.style.display = 'flex';
               }}
             />
-          ) : (
-            <img 
-              src="/api/placeholder/50/50" 
-              alt={profileData.name}
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-          )}
-          <div className="avatar-fallback" style={{ display: user?.avatar ? 'none' : 'flex' }}>
+          ) : null}
+          <div className="avatar-fallback" style={{ 
+            display: user?.avatar ? 'none' : 'flex' 
+          }}>
             {profileData.name.split(' ').map(n => n[0]).join('')}
           </div>
         </div>

@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserProfileCard from './UserProfileCard';
 import CreatePost from './CreatePost';
-import { friendsAPI, chatAPI, authAPI } from '../services/api';
+import { friendsAPI, chatAPI, authAPI, postsAPI } from '../services/api';
 import { io } from 'socket.io-client';
 import './HomePage.css';
-import { 
-  getPosts, 
-  addPost, 
-  updatePost, 
-  getAllUsers
-} from '../utils/localStorage';
 
-const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, onNavigateToChat }) => {
+const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onNavigateToChat }) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -19,8 +15,15 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   const [postLikes, setPostLikes] = useState({});
   const [userLikedPosts, setUserLikedPosts] = useState({}); // Track which posts user has liked
   const [postComments, setPostComments] = useState({});
-  const [showCommentInput, setShowCommentInput] = useState({});
   const [commentText, setCommentText] = useState({});
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
+  const [commentLikes, setCommentLikes] = useState({}); // Track comment likes
+  const [userLikedComments, setUserLikedComments] = useState({}); // Track which comments user has liked
+  const [replyText, setReplyText] = useState({}); // Track reply input text
+  const [showReplyInput, setShowReplyInput] = useState({}); // Track which comment reply input is shown
+  const [editingReplyId, setEditingReplyId] = useState(null); // Track which reply is being edited
+  const [editReplyText, setEditReplyText] = useState(''); // Track edit reply text
   const [posts, setPosts] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(0); // Track unread messages count
@@ -30,11 +33,55 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-  // Load data from localStorage and backend on component mount
+  // Load data from backend API on component mount
   useEffect(() => {
     const loadData = async () => {
-      const loadedPosts = getPosts();
-      setPosts(loadedPosts);
+      // Load posts from backend API
+      if (user?.id || user?._id) {
+        try {
+          const postsResponse = await postsAPI.getPosts();
+          if (postsResponse.data.success) {
+            console.log('📝 Loaded posts from backend:', postsResponse.data.posts.length, 'posts');
+            setPosts(postsResponse.data.posts);
+            
+            // Initialize post likes and comments from loaded posts
+            const likes = {};
+            const comments = {};
+            const userLikes = {};
+            const commentLikesData = {};
+            const userLikedCommentsData = {};
+            
+            postsResponse.data.posts.forEach(post => {
+              likes[post._id] = post.likes?.length || 0;
+              comments[post._id] = post.comments || [];
+              userLikes[post._id] = post.likes?.includes(user?.id || user?._id) || false;
+              
+              // Initialize comment likes from loaded data
+              if (post.comments) {
+                post.comments.forEach(comment => {
+                  const commentId = comment._id || comment.id;
+                  if (commentId) {
+                    commentLikesData[commentId] = comment.likes ? comment.likes.length : 0;
+                    userLikedCommentsData[commentId] = comment.likes ? 
+                      comment.likes.includes(user?.id || user?._id) : false;
+                  }
+                });
+              }
+            });
+            
+            setPostLikes(likes);
+            setPostComments(comments);
+            setUserLikedPosts(userLikes);
+            setCommentLikes(commentLikesData);
+            setUserLikedComments(userLikedCommentsData);
+          } else {
+            setPosts([]);
+          }
+        } catch (error) {
+          console.error('❌ Failed to load posts from backend:', error);
+          setPosts([]);
+        }
+      }
       
       // Load friends from backend API only - no localStorage involvement
       if (user?.id || user?._id) {
@@ -59,33 +106,13 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
           console.log('👥 Loaded users from backend:', usersResponse.data.users.length, 'users');
           setAllUsers(usersResponse.data.users);
         } else {
-          console.log('⚠️ API failed, falling back to localStorage');
-          // Fallback to localStorage if API fails
-          const loadedUsers = getAllUsers();
-          setAllUsers(loadedUsers);
+          console.log('⚠️ API failed');
+          setAllUsers([]);
         }
       } catch (error) {
         console.error('❌ Failed to load users from backend:', error);
-        console.log('⚠️ Using localStorage fallback');
-        // Fallback to localStorage
-        const loadedUsers = getAllUsers();
-        setAllUsers(loadedUsers);
+        setAllUsers([]);
       }
-      
-      // Initialize post likes and comments from loaded posts
-      const likes = {};
-      const comments = {};
-      const userLikes = {};
-      
-      loadedPosts.forEach(post => {
-        likes[post.id] = post.likes || 0;
-        comments[post.id] = post.comments || [];
-        userLikes[post.id] = post.likedBy?.includes(user?.id) || false;
-      });
-      
-      setPostLikes(likes);
-      setPostComments(comments);
-      setUserLikedPosts(userLikes);
     };
     
     loadData();
@@ -283,7 +310,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
     // Navigate to user profile
     const userId = selectedUser._id || selectedUser.id;
     if (userId) {
-      onViewProfile(userId);
+      handleViewProfile(userId);
     } else {
       console.error('❌ No valid user ID found:', selectedUser);
     }
@@ -321,7 +348,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
     setShowProfileMenu(false);
     switch(action) {
       case 'view':
-        onViewProfile(user.id);
+        handleViewProfile(user.id);
         break;
       case 'edit':
         console.log('Edit profile');
@@ -334,22 +361,40 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
     }
   };
 
-  const handleCreatePost = (newPost) => {
-    const savedPost = addPost({
-      ...newPost,
-      author: user
-    });
-    
-    if (savedPost) {
-      setPosts(prevPosts => [savedPost, ...prevPosts]);
-      setPostLikes(prev => ({ ...prev, [savedPost.id]: 0 }));
-      setPostComments(prev => ({ ...prev, [savedPost.id]: [] }));
-      setUserLikedPosts(prev => ({ ...prev, [savedPost.id]: false }));
-      console.log('New post created:', savedPost);
+  const handleCreatePost = async (newPost) => {
+    try {
+      console.log('🎯 Creating post:', newPost);
+      console.log('🔑 User context:', user);
+      
+      const response = await postsAPI.createPost({
+        content: newPost.content,
+        image: newPost.image || null
+      });
+      
+      console.log('📤 API Response:', response);
+      
+      if (response.data.success) {
+        const savedPost = response.data.post;
+        console.log('✅ New post created successfully:', savedPost);
+        setPosts(prevPosts => [savedPost, ...prevPosts]);
+        setPostLikes(prev => ({ ...prev, [savedPost._id]: 0 }));
+        setPostComments(prev => ({ ...prev, [savedPost._id]: [] }));
+        setUserLikedPosts(prev => ({ ...prev, [savedPost._id]: false }));
+      } else {
+        console.log('⚠️ API returned success=false:', response.data);
+      }
+    } catch (error) {
+      console.error('❌ Failed to create post:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
     }
   };
 
   // Friend management functions
+  const handleViewProfile = (userId) => {
+    navigate(`/profile/${userId}`);
+  };
+
   const handleAddFriend = async (friendData) => {
     if (!friendData || (!friendData.id && !friendData._id)) {
       console.error('Friend data is missing or invalid:', friendData);
@@ -390,45 +435,40 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
   };
 
   // Like management functions
-  const handleLike = (postId) => {
+  const handleLike = async (postId) => {
     const isCurrentlyLiked = userLikedPosts[postId];
     
-    setUserLikedPosts(prev => ({
-      ...prev,
-      [postId]: !isCurrentlyLiked
-    }));
-    
-    const newLikeCount = isCurrentlyLiked 
-      ? Math.max(0, (postLikes[postId] || 0) - 1) // Unlike: decrease by 1, but don't go below 0
-      : (postLikes[postId] || 0) + 1; // Like: increase by 1
-    
-    setPostLikes(prevLikes => ({
-      ...prevLikes,
-      [postId]: newLikeCount
-    }));
-    
-    // Update post in localStorage
-    const currentPost = posts.find(p => p.id === postId);
-    if (currentPost) {
-      const updatedLikedBy = isCurrentlyLiked 
-        ? currentPost.likedBy?.filter(id => id !== user?.id) || []
-        : [...(currentPost.likedBy || []), user?.id];
+    try {
+      if (isCurrentlyLiked) {
+        // Unlike the post
+        await postsAPI.unlikePost(postId);
+      } else {
+        // Like the post
+        await postsAPI.likePost(postId);
+      }
       
-      updatePost(postId, {
-        likes: newLikeCount,
-        likedBy: updatedLikedBy
-      });
+      // Update local state
+      setUserLikedPosts(prev => ({
+        ...prev,
+        [postId]: !isCurrentlyLiked
+      }));
+      
+      const newLikeCount = isCurrentlyLiked 
+        ? Math.max(0, (postLikes[postId] || 0) - 1)
+        : (postLikes[postId] || 0) + 1;
+      
+      setPostLikes(prevLikes => ({
+        ...prevLikes,
+        [postId]: newLikeCount
+      }));
+      
+      console.log(`✅ Post ${isCurrentlyLiked ? 'unliked' : 'liked'} successfully`);
+    } catch (error) {
+      console.error('❌ Failed to toggle like:', error);
     }
   };
 
   // Comment management functions
-  const handleToggleComment = (postId) => {
-    setShowCommentInput(prev => ({
-      ...prev,
-      [postId]: !prev[postId]
-    }));
-  };
-
   const handleCommentChange = (postId, text) => {
     setCommentText(prev => ({
       ...prev,
@@ -436,40 +476,318 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
     }));
   };
 
-  const handleSubmitComment = (postId) => {
-    const text = commentText[postId];
-    if (text && text.trim()) {
-      const newComment = {
-        id: Date.now(),
-        text: text.trim(),
-        author: user?.firstName && user?.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user?.name || 'Anonymous',
-        timestamp: new Date()
-      };
-      
-      setPostComments(prev => ({
-        ...prev,
-        [postId]: [...(prev[postId] || []), newComment]
-      }));
-      
-      // Update post in localStorage
-      const currentPost = posts.find(p => p.id === postId);
-      if (currentPost) {
-        const updatedComments = [...(currentPost.comments || []), newComment];
-        updatePost(postId, {
-          comments: updatedComments
+  const handleEditComment = (commentId, currentContent) => {
+    setEditingCommentId(commentId);
+    setEditCommentText(currentContent || '');
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditCommentText('');
+  };
+
+  const handleSaveEditComment = async (postId, commentId) => {
+    if (editCommentText && editCommentText.trim()) {
+      try {
+        const response = await postsAPI.updateComment(postId, commentId, {
+          content: editCommentText.trim()
         });
+        
+        if (response.data.success) {
+          // Update local state
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].map(comment => 
+              (comment._id || comment.id) === commentId 
+                ? { ...comment, content: editCommentText.trim(), text: editCommentText.trim() }
+                : comment
+            )
+          }));
+          
+          setEditingCommentId(null);
+          setEditCommentText('');
+          console.log('✅ Comment updated successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to update comment:', error);
+        alert('Failed to update comment. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteComment = async (postId, commentId) => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      try {
+        const response = await postsAPI.deleteComment(postId, commentId);
+        
+        if (response.data.success) {
+          // Update local state
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].filter(comment => 
+              (comment._id || comment.id) !== commentId
+            )
+          }));
+          
+          console.log('✅ Comment deleted successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to delete comment:', error);
+        alert('Failed to delete comment. Please try again.');
+      }
+    }
+  };
+
+  const handleLikeComment = async (postId, commentId) => {
+    const isCurrentlyLiked = userLikedComments[commentId];
+    
+    try {
+      let response;
+      if (isCurrentlyLiked) {
+        response = await postsAPI.unlikeComment(postId, commentId);
+      } else {
+        response = await postsAPI.likeComment(postId, commentId);
       }
       
-      setCommentText(prev => ({
-        ...prev,
-        [postId]: ''
-      }));
-      setShowCommentInput(prev => ({
-        ...prev,
-        [postId]: false
-      }));
+      if (response.data.success) {
+        // Update local state
+        setUserLikedComments(prev => ({
+          ...prev,
+          [commentId]: !isCurrentlyLiked
+        }));
+        
+        setCommentLikes(prev => ({
+          ...prev,
+          [commentId]: response.data.likes
+        }));
+        
+        // Update the comment in postComments to persist the like info
+        setPostComments(prev => ({
+          ...prev,
+          [postId]: prev[postId].map(comment => {
+            if ((comment._id || comment.id) === commentId) {
+              const updatedLikes = isCurrentlyLiked 
+                ? (comment.likes || []).filter(id => id !== (user._id || user.id))
+                : [...(comment.likes || []), (user._id || user.id)];
+              return {
+                ...comment,
+                likes: updatedLikes
+              };
+            }
+            return comment;
+          })
+        }));
+        
+        console.log(`✅ Comment ${isCurrentlyLiked ? 'unliked' : 'liked'} successfully`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to toggle comment like:', error);
+    }
+  };
+
+  const handleReplyToComment = (commentId) => {
+    setShowReplyInput(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  };
+
+  const handleReplyTextChange = (commentId, text) => {
+    setReplyText(prev => ({
+      ...prev,
+      [commentId]: text
+    }));
+  };
+
+  const handleSubmitReply = async (postId, commentId) => {
+    const text = replyText[commentId];
+    if (text && text.trim()) {
+      try {
+        const response = await postsAPI.replyToComment(postId, commentId, { 
+          content: text.trim() 
+        });
+        
+        if (response.data.success) {
+          // Create reply with complete author information (similar to comments)
+          const replyWithCompleteAuthor = {
+            _id: response.data.reply._id || response.data.reply.id || Date.now().toString(),
+            content: response.data.reply.content || response.data.reply.text || text.trim(),
+            text: response.data.reply.text || response.data.reply.content || text.trim(),
+            createdAt: response.data.reply.createdAt || new Date().toISOString(),
+            author: {
+              _id: user._id || user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              username: user.username,
+              avatar: user.avatar
+            }
+          };
+
+          // Update local state with the new reply
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].map(comment => 
+              (comment._id || comment.id) === commentId 
+                ? { ...comment, replies: [...(comment.replies || []), replyWithCompleteAuthor] }
+                : comment
+            )
+          }));
+          
+          setReplyText(prev => ({
+            ...prev,
+            [commentId]: ''
+          }));
+          
+          setShowReplyInput(prev => ({
+            ...prev,
+            [commentId]: false
+          }));
+          
+          console.log('✅ Reply added successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to add reply:', error);
+      }
+    }
+  };
+
+  const handleEditReply = (replyId, currentText) => {
+    setEditingReplyId(replyId);
+    setEditReplyText(currentText);
+  };
+
+  const handleCancelEditReply = () => {
+    setEditingReplyId(null);
+    setEditReplyText('');
+  };
+
+  const handleSaveEditReply = async (postId, commentId, replyId) => {
+    if (editReplyText && editReplyText.trim()) {
+      try {
+        const response = await postsAPI.updateReply(postId, commentId, replyId, {
+          content: editReplyText.trim()
+        });
+        
+        if (response.data.success) {
+          // Update local state
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].map(comment => 
+              (comment._id || comment.id) === commentId 
+                ? {
+                    ...comment,
+                    replies: comment.replies.map(reply =>
+                      (reply._id || reply.id) === replyId
+                        ? { ...reply, content: editReplyText.trim(), text: editReplyText.trim() }
+                        : reply
+                    )
+                  }
+                : comment
+            )
+          }));
+          
+          setEditingReplyId(null);
+          setEditReplyText('');
+          console.log('✅ Reply updated successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to update reply:', error);
+        alert('Failed to update reply. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteReply = async (postId, commentId, replyId) => {
+    if (window.confirm('Are you sure you want to delete this reply?')) {
+      try {
+        const response = await postsAPI.deleteReply(postId, commentId, replyId);
+        
+        if (response.data.success) {
+          // Update local state
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].map(comment => 
+              (comment._id || comment.id) === commentId 
+                ? {
+                    ...comment,
+                    replies: comment.replies.filter(reply => 
+                      (reply._id || reply.id) !== replyId
+                    )
+                  }
+                : comment
+            )
+          }));
+          
+          console.log('✅ Reply deleted successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to delete reply:', error);
+        alert('Failed to delete reply. Please try again.');
+      }
+    }
+  };
+
+  const handleSubmitComment = async (postId) => {
+    const text = commentText[postId];
+    if (text && text.trim()) {
+      try {
+        const response = await postsAPI.addComment(postId, { 
+          content: text.trim() 
+        });
+        
+        console.log('🔍 Full comment response:', response.data);
+        
+        if (response.data.success) {
+          const newComment = response.data.comment;
+          console.log('🔍 New comment from backend:', newComment);
+          console.log('🔍 Comment author:', newComment?.author);
+          console.log('🔍 Current user:', user);
+          
+          // Create comment with complete author information
+          const commentWithCompleteAuthor = {
+            _id: newComment._id || newComment.id || Date.now().toString(),
+            content: newComment.content || newComment.text || text.trim(),
+            text: newComment.text || newComment.content || text.trim(),
+            createdAt: newComment.createdAt || new Date().toISOString(),
+            likes: [], // Initialize empty likes array
+            author: {
+              _id: user._id || user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              username: user.username,
+              avatar: user.avatar
+            }
+          };
+          
+          console.log('🔍 Comment with complete author:', commentWithCompleteAuthor);
+          
+          setPostComments(prev => ({
+            ...prev,
+            [postId]: [...(prev[postId] || []), commentWithCompleteAuthor]
+          }));
+          
+          // Initialize comment likes for new comment
+          const newCommentId = commentWithCompleteAuthor._id;
+          setCommentLikes(prev => ({
+            ...prev,
+            [newCommentId]: 0
+          }));
+          
+          setUserLikedComments(prev => ({
+            ...prev,
+            [newCommentId]: false
+          }));
+          
+          setCommentText(prev => ({
+            ...prev,
+            [postId]: ''
+          }));
+          
+          console.log('✅ Comment added successfully');
+        }
+      } catch (error) {
+        console.error('❌ Failed to add comment:', error);
+      }
     }
   };
 
@@ -692,7 +1010,7 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
         <div className="content-layout">
           {/* Left Sidebar */}
           <div className="left-sidebar">
-            <UserProfileCard user={user} onViewProfile={onViewProfile} />
+            <UserProfileCard user={user} onViewProfile={handleViewProfile} />
           </div>
           
           {/* Main Feed */}
@@ -745,24 +1063,24 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                               <div className="author-info">
                                 <strong 
                                   className="author-name-clickable"
-                                  onClick={() => post.author?.id && onViewProfile(post.author.id)}
+                                  onClick={() => (post.author?._id || post.author?.id) && handleViewProfile(post.author._id || post.author.id)}
                                 >
                                   {post.author?.firstName && post.author?.lastName 
                                     ? `${post.author.firstName} ${post.author.lastName}` 
                                     : post.author?.name || 'Unknown User'}
                                 </strong>
-                                <small>{new Date(post.timestamp).toLocaleString()}</small>
+                                <small>{post.createdAt ? new Date(post.createdAt).toLocaleString() : 'Just now'}</small>
                               </div>
                             </div>
                             
                             {/* Add Friend Button */}
-                            {post.author?.id && post.author.id !== user?.id && (
+                            {(post.author?._id || post.author?.id) && (post.author._id || post.author.id) !== (user?._id || user?.id) && (
                               <button
-                                className={`friend-btn ${isFriendCheck(post.author.id) ? 'remove-friend' : 'add-friend'}`}
+                                className={`friend-btn ${isFriendCheck(post.author._id || post.author.id) ? 'remove-friend' : 'add-friend'}`}
                                 onClick={() => handleAddFriend(post.author)}
-                                title={isFriendCheck(post.author.id) ? 'Remove Friend' : 'Add Friend'}
+                                title={isFriendCheck(post.author._id || post.author.id) ? 'Remove Friend' : 'Add Friend'}
                               >
-                                {isFriendCheck(post.author.id) ? (
+                                {isFriendCheck(post.author._id || post.author.id) ? (
                                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="8.5" cy="7" r="4"></circle>
@@ -786,74 +1104,36 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                             </div>
                           )}
                           
-                          {post.attachments && post.attachments.length > 0 && (
+                          {post.image && (
                             <div className="post-attachments">
-                              {post.attachments.map((attachment, attachIndex) => (
-                                <div key={attachIndex} className="post-attachment">
-                                  {attachment.type === 'image' && attachment.preview && (
-                                    <div 
-                                      className="attachment-image"
-                                      onClick={() => window.open(attachment.preview, '_blank')}
-                                      title="Click to view full size"
-                                    >
-                                      <img src={attachment.preview} alt={attachment.name} />
-                                    </div>
-                                  )}
-                                  {attachment.type !== 'image' && (
-                                    <div className="attachment-file">
-                                      <div className="attachment-icon">
-                                        {attachment.type === 'video' && (
-                                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                          </svg>
-                                        )}
-                                        {attachment.type === 'audio' && (
-                                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                            <line x1="12" y1="19" x2="12" y2="23"></line>
-                                            <line x1="8" y1="23" x2="16" y2="23"></line>
-                                          </svg>
-                                        )}
-                                        {attachment.type === 'file' && (
-                                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                                          </svg>
-                                        )}
-                                      </div>
-                                      <div className="attachment-info">
-                                        <span className="attachment-name">{attachment.name}</span>
-                                        <span className="attachment-size">
-                                          {(attachment.size / 1024 / 1024).toFixed(2)} MB
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
+                              <div className="post-attachment">
+                                <div 
+                                  className="attachment-image"
+                                  onClick={() => window.open(`http://localhost:5001${post.image}`, '_blank')}
+                                  title="Click to view full size"
+                                >
+                                  <img src={`http://localhost:5001${post.image}`} alt="Post attachment" />
                                 </div>
-                              ))}
+                              </div>
                             </div>
                           )}
                           
                           {/* Post Actions */}
                           <div className="post-actions">
                             <button 
-                              className={`action-btn like-btn ${userLikedPosts[post.id] ? 'liked' : ''}`}
-                              onClick={() => handleLike(post.id)}
+                              className={`action-btn like-btn ${userLikedPosts[post._id] ? 'liked' : ''}`}
+                              onClick={() => handleLike(post._id)}
                             >
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                               </svg>
-                              {userLikedPosts[post.id] ? 'Unlike' : 'Like'} {postLikes[post.id] > 0 && `(${postLikes[post.id]})`}
+                              {userLikedPosts[post._id] ? 'Unlike' : 'Like'} {postLikes[post._id] > 0 && `(${postLikes[post._id]})`}
                             </button>
-                            <button 
-                              className="action-btn comment-btn"
-                              onClick={() => handleToggleComment(post.id)}
-                            >
+                            <button className="action-btn comment-btn">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                               </svg>
-                              Comment {(postComments[post.id]?.length || 0) > 0 && `(${postComments[post.id].length})`}
+                              Comment {(postComments[post._id]?.length || 0) > 0 && `(${postComments[post._id].length})`}
                             </button>
                             <button className="action-btn share-btn">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -867,57 +1147,313 @@ const HomePage = ({ onLogout, user, isDarkMode, setIsDarkMode, onViewProfile, on
                             </button>
                           </div>
                           
-                          {/* Comment Input */}
-                          {showCommentInput[post.id] && (
-                            <div className="comment-input-container">
-                              <div className="comment-input-wrapper">
-                                <input
-                                  type="text"
-                                  placeholder="Write a comment..."
-                                  value={commentText[post.id] || ''}
-                                  onChange={(e) => handleCommentChange(post.id, e.target.value)}
-                                  onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
-                                  className="comment-input"
-                                />
-                                <button
-                                  onClick={() => handleSubmitComment(post.id)}
-                                  className="comment-send-btn"
-                                  disabled={!commentText[post.id]?.trim()}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
-                                  </svg>
-                                </button>
-                              </div>
+                          {/* Comment Input - Always visible */}
+                          <div className="comment-input-container">
+                            <div className="comment-input-wrapper">
+                              <input
+                                type="text"
+                                placeholder="Write a comment..."
+                                value={commentText[post._id] || ''}
+                                onChange={(e) => handleCommentChange(post._id, e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post._id)}
+                                className="comment-input"
+                              />
+                              <button
+                                onClick={() => handleSubmitComment(post._id)}
+                                className="comment-send-btn"
+                                                                              disabled={!commentText[post._id] || !commentText[post._id].trim()}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                                  <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                                </svg>
+                              </button>
                             </div>
-                          )}
+                          </div>
                           
                           {/* Comments List */}
-                          {postComments[post.id]?.length > 0 && (
+                          {postComments[post._id]?.length > 0 && (
                             <div className="comments-list">
-                              {postComments[post.id].map((comment) => (
-                                <div key={comment.id} className="comment-item">
+                              {postComments[post._id].map((comment, commentIndex) => (
+                                <div key={comment._id || comment.id || `comment-${commentIndex}`} className="comment-item">
                                   <div className="comment-author">
                                     <div className="comment-avatar">
                                       <img 
-                                        src="/api/placeholder/24/24" 
-                                        alt={comment.author}
+                                        src={comment.author?.avatar || "/api/placeholder/24/24"} 
+                                        alt={comment.author?.firstName ? `${comment.author.firstName} ${comment.author.lastName}` : comment.author?.username || 'User'}
                                         onError={(e) => {
                                           e.target.style.display = 'none';
                                           e.target.nextSibling.style.display = 'flex';
                                         }}
                                       />
                                       <div className="avatar-fallback">
-                                        {comment.author && typeof comment.author === 'string' ? comment.author.split(' ').map(n => n[0]).join('') : 'U'}
+                                        {comment.author?.firstName && comment.author?.lastName 
+                                          ? `${comment.author.firstName[0]}${comment.author.lastName[0]}` 
+                                          : comment.author?.username ? comment.author.username[0].toUpperCase() : 'U'}
                                       </div>
                                     </div>
                                     <div className="comment-content">
                                       <div className="comment-bubble">
-                                        <strong>{comment.author}</strong>
-                                        <p>{comment.text}</p>
+                                        <strong>
+                                          {comment.author?.firstName && comment.author?.lastName 
+                                            ? `${comment.author.firstName} ${comment.author.lastName}` 
+                                            : comment.author?.username || 'Unknown User'}
+                                        </strong>
+                                        
+                                        {/* Edit mode or display mode */}
+                                        {editingCommentId === (comment._id || comment.id) ? (
+                                          <div className="edit-comment-container">
+                                            <input
+                                              type="text"
+                                              value={editCommentText || ''}
+                                              onChange={(e) => setEditCommentText(e.target.value)}
+                                              onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  handleSaveEditComment(post._id, comment._id || comment.id);
+                                                } else if (e.key === 'Escape') {
+                                                  handleCancelEditComment();
+                                                }
+                                              }}
+                                              className="edit-comment-input"
+                                              autoFocus
+                                            />
+                                            <div className="edit-comment-actions">
+                                              <button
+                                                onClick={() => handleSaveEditComment(post._id, comment._id || comment.id)}
+                                                className="save-edit-btn"
+                                                disabled={!editCommentText || !editCommentText.trim()}
+                                              >
+                                                Save
+                                              </button>
+                                              <button
+                                                onClick={handleCancelEditComment}
+                                                className="cancel-edit-btn"
+                                              >
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p>{comment.content || comment.text}</p>
+                                        )}
                                       </div>
-                                      <small>{comment.timestamp.toLocaleString()}</small>
+                                      
+                                      <div className="comment-meta">
+                                        {/* Show edit/delete buttons only for current user's comments */}
+                                        {(comment.author?._id || comment.author?.id) === (user?._id || user?.id) && (
+                                          <div className="comment-actions">
+                                            <button
+                                              onClick={() => handleEditComment(comment._id || comment.id, comment.content || comment.text || '')}
+                                              className="edit-comment-btn"
+                                              title="Edit comment"
+                                            >
+                                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                              </svg>
+                                              <span>Edit</span>
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteComment(post._id, comment._id || comment.id)}
+                                              className="delete-comment-btn"
+                                              title="Delete comment"
+                                            >
+                                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polyline points="3,6 5,6 21,6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                              </svg>
+                                              <span>Delete</span>
+                                            </button>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Show like/reply buttons for other users' comments */}
+                                        {(comment.author?._id || comment.author?.id) !== (user?._id || user?.id) && (
+                                          <div className="comment-interactions">
+                                            <button
+                                              onClick={() => handleLikeComment(post._id, comment._id || comment.id)}
+                                              className={`like-comment-btn ${userLikedComments[comment._id || comment.id] ? 'liked' : ''}`}
+                                              title={userLikedComments[comment._id || comment.id] ? 'Unlike comment' : 'Like comment'}
+                                            >
+                                              <svg width="12" height="12" viewBox="0 0 24 24" fill={userLikedComments[comment._id || comment.id] ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                              </svg>
+                                              <span>Like</span>
+                                              {commentLikes[comment._id || comment.id] > 0 && (
+                                                <span className="like-count">({commentLikes[comment._id || comment.id]})</span>
+                                              )}
+                                            </button>
+                                            <button
+                                              onClick={() => handleReplyToComment(comment._id || comment.id)}
+                                              className="reply-comment-btn"
+                                              title="Reply to comment"
+                                            >
+                                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+                                              </svg>
+                                              <span>Reply</span>
+                                            </button>
+                                          </div>
+                                        )}
+                                        
+                                        <small>{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : 'Just now'}</small>
+                                      </div>
+
+                                      {/* Reply input for other users' comments */}
+                                      {(comment.author?._id || comment.author?.id) !== (user?._id || user?.id) && 
+                                       showReplyInput[comment._id || comment.id] && (
+                                        <div className="reply-input-container">
+                                          <input
+                                            type="text"
+                                            value={replyText[comment._id || comment.id] || ''}
+                                            onChange={(e) => handleReplyTextChange(comment._id || comment.id, e.target.value)}
+                                            onKeyPress={(e) => {
+                                              if (e.key === 'Enter' && replyText[comment._id || comment.id]?.trim()) {
+                                                handleSubmitReply(post._id, comment._id || comment.id);
+                                              }
+                                            }}
+                                            placeholder="Write a reply..."
+                                            className="reply-input"
+                                            autoFocus
+                                          />
+                                          <div className="reply-actions">
+                                            <button
+                                              onClick={() => handleSubmitReply(post._id, comment._id || comment.id)}
+                                              className="submit-reply-btn"
+                                              disabled={!replyText[comment._id || comment.id]?.trim()}
+                                            >
+                                              Reply
+                                            </button>
+                                            <button
+                                              onClick={() => handleReplyToComment(comment._id || comment.id)}
+                                              className="cancel-reply-btn"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Display replies if any */}
+                                      {comment.replies && comment.replies.length > 0 && (
+                                        <div className="replies-container">
+                                          {comment.replies.map((reply, replyIndex) => (
+                                            <div key={reply._id || reply.id || `reply-${replyIndex}`} className="reply-item">
+                                              <div className="reply-author">
+                                                <div className="reply-avatar">
+                                                  <img 
+                                                    src={reply.author?.avatar || "/api/placeholder/20/20"} 
+                                                    alt={reply.author?.firstName ? `${reply.author.firstName} ${reply.author.lastName}` : reply.author?.username || 'User'}
+                                                    onError={(e) => {
+                                                      e.target.style.display = 'none';
+                                                      e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                  />
+                                                  <div className="avatar-fallback">
+                                                    {reply.author?.firstName && reply.author?.lastName 
+                                                      ? `${reply.author.firstName[0]}${reply.author.lastName[0]}` 
+                                                      : reply.author?.username ? reply.author.username[0].toUpperCase() : 'U'}
+                                                  </div>
+                                                </div>
+                                                <div className="reply-content">
+                                                  <div className="reply-bubble">
+                                                    <strong>
+                                                      {reply.author?.firstName && reply.author?.lastName 
+                                                        ? `${reply.author.firstName} ${reply.author.lastName}` 
+                                                        : reply.author?.username || 'Unknown User'}
+                                                    </strong>
+                                                    
+                                                    {/* Edit mode or display mode for reply */}
+                                                    {editingReplyId === (reply._id || reply.id) ? (
+                                                      <div className="edit-reply-container">
+                                                        <input
+                                                          type="text"
+                                                          value={editReplyText || ''}
+                                                          onChange={(e) => setEditReplyText(e.target.value)}
+                                                          onKeyPress={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                              handleSaveEditReply(post._id, comment._id || comment.id, reply._id || reply.id);
+                                                            } else if (e.key === 'Escape') {
+                                                              handleCancelEditReply();
+                                                            }
+                                                          }}
+                                                          className="edit-reply-input"
+                                                          autoFocus
+                                                        />
+                                                        <div className="edit-reply-actions">
+                                                          <button
+                                                            onClick={() => handleSaveEditReply(post._id, comment._id || comment.id, reply._id || reply.id)}
+                                                            className="save-edit-btn"
+                                                            disabled={!editReplyText || !editReplyText.trim()}
+                                                          >
+                                                            Save
+                                                          </button>
+                                                          <button
+                                                            onClick={handleCancelEditReply}
+                                                            className="cancel-edit-btn"
+                                                          >
+                                                            Cancel
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    ) : (
+                                                      <p>{reply.content || reply.text}</p>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  <div className="reply-meta">
+                                                    {/* Show edit/delete buttons only for current user's replies */}
+                                                    {(reply.author?._id || reply.author?.id) === (user?._id || user?.id) && (
+                                                      <div className="reply-actions">
+                                                        <button
+                                                          onClick={() => handleEditReply(reply._id || reply.id, reply.content || reply.text || '')}
+                                                          className="edit-reply-btn"
+                                                          title="Edit reply"
+                                                        >
+                                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                          </svg>
+                                                          <span>Edit</span>
+                                                        </button>
+                                                        <button
+                                                          onClick={() => handleDeleteReply(post._id, comment._id || comment.id, reply._id || reply.id)}
+                                                          className="delete-reply-btn"
+                                                          title="Delete reply"
+                                                        >
+                                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <polyline points="3,6 5,6 21,6"></polyline>
+                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                          </svg>
+                                                          <span>Delete</span>
+                                                        </button>
+                                                      </div>
+                                                    )}
+
+                                                    {/* Show like/reply buttons for other users' replies */}
+                                                    {(reply.author?._id || reply.author?.id) !== (user?._id || user?.id) && (
+                                                      <div className="reply-interactions">
+                                                        <button
+                                                          onClick={() => handleReplyToComment(comment._id || comment.id)}
+                                                          className="reply-to-reply-btn"
+                                                          title="Reply to this reply"
+                                                        >
+                                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+                                                          </svg>
+                                                          <span>Reply</span>
+                                                        </button>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    <small>{reply.createdAt ? new Date(reply.createdAt).toLocaleString() : 'Just now'}</small>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

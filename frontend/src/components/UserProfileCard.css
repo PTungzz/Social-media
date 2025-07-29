@@ -1,32 +1,35 @@
-/* UserProfileCard Styles */
+/* UserProfileCard Styles - Facebook Layout Compatible */
 .user-profile-card {
   background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   margin-bottom: 20px;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
 }
 
 .dark-mode .user-profile-card {
-  background-color: #2d2d2d;
+  background-color: #242526;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Profile Header */
 .profile-header {
-  padding: 20px 20px 20px 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
 .profile-avatar {
   position: relative;
-  width: 50px;
-  height: 50px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  margin: 20px 0 0 0;
 }
 
 .profile-avatar img {
@@ -38,13 +41,13 @@
 .avatar-fallback {
   width: 100%;
   height: 100%;
-  background-color: #00d4ff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: none;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: bold;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .profile-info {
@@ -52,96 +55,99 @@
 }
 
 .profile-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333333;
-  margin: 20px 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1c1e21;
+  margin: 0 0 4px 0;
 }
 
 .profile-friends {
-  font-size: 14px;
-  color: #666666;
+  font-size: 13px;
+  color: #65676b;
   margin: 0;
 }
 
 .dark-mode .profile-name {
-  color: #ffffff;
+  color: #e4e6ea;
 }
 
 .dark-mode .profile-friends {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .profile-menu-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
   border-radius: 50%;
-  color: #666666;
-  transition: all 0.3s ease;
+  color: #65676b;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-menu-btn:hover {
-  background-color: #f0f0f0;
-  color: #00d4ff;
+  background-color: #f0f2f5;
+  color: #1877f2;
 }
 
 .dark-mode .profile-menu-btn {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .dark-mode .profile-menu-btn:hover {
-  background-color: #404040;
-  color: #00d4ff;
+  background-color: #3a3b3c;
+  color: #4599ff;
 }
 
 /* Profile Details */
 .profile-details {
-  padding: 0 20px 20px 20px;
+  padding: 0 20px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .detail-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #666666;
-  font-size: 14px;
+  gap: 10px;
+  color: #65676b;
+  font-size: 13px;
 }
 
 .detail-item svg {
-  color: #999999;
+  color: #65676b;
   flex-shrink: 0;
 }
 
 .dark-mode .detail-item {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .dark-mode .detail-item svg {
-  color: #999999;
+  color: #b0b3b8;
 }
 
 /* Profile Divider */
 .profile-divider {
   height: 1px;
-  background-color: #e0e0e0;
+  background-color: #e4e6ea;
   margin: 0 20px;
 }
 
 .dark-mode .profile-divider {
-  background-color: #404040;
+  background-color: #3a3b3c;
 }
 
 /* Profile Stats */
 .profile-stats {
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stat-item {
@@ -151,46 +157,46 @@
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #666666;
+  font-size: 13px;
+  color: #65676b;
 }
 
 .stat-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #333333;
+  color: #1c1e21;
 }
 
 .dark-mode .stat-label {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .dark-mode .stat-value {
-  color: #ffffff;
+  color: #e4e6ea;
 }
 
 /* Social Profiles */
 .social-profiles {
-  padding: 20px;
+  padding: 16px 20px;
 }
 
 .social-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: #333333;
-  margin: 0 0 16px 0;
+  color: #1c1e21;
+  margin: 0 0 12px 0;
 }
 
 .dark-mode .social-title {
-  color: #ffffff;
+  color: #e4e6ea;
 }
 
 .social-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .social-item:last-child {
@@ -198,83 +204,143 @@
 }
 
 .dark-mode .social-item {
-  border-bottom-color: #404040;
+  border-bottom-color: #3a3b3c;
 }
 
 .social-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .social-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background-color: #f0f0f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background-color: #f0f2f5;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .dark-mode .social-icon {
-  background-color: #404040;
+  background-color: #3a3b3c;
 }
 
 .social-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .social-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #333333;
+  color: #1c1e21;
 }
 
 .social-platform {
-  font-size: 12px;
-  color: #666666;
+  font-size: 11px;
+  color: #65676b;
 }
 
 .dark-mode .social-name {
-  color: #ffffff;
+  color: #e4e6ea;
 }
 
 .dark-mode .social-platform {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .social-edit-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
   border-radius: 50%;
-  color: #666666;
-  transition: all 0.3s ease;
+  color: #65676b;
+  transition: all 0.2s ease;
 }
 
 .social-edit-btn:hover {
-  background-color: #f0f0f0;
-  color: #00d4ff;
+  background-color: #f0f2f5;
+  color: #1877f2;
 }
 
 .dark-mode .social-edit-btn {
-  color: #cccccc;
+  color: #b0b3b8;
 }
 
 .dark-mode .social-edit-btn:hover {
-  background-color: #404040;
-  color: #00d4ff;
+  background-color: #3a3b3c;
+  color: #4599ff;
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .user-profile-card {
+    margin-bottom: 15px;
+  }
+  
+  .profile-header {
+    padding: 14px 18px;
+  }
+  
+  .profile-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .profile-name {
+    font-size: 15px;
+  }
+  
+  .profile-friends {
+    font-size: 12px;
+  }
+  
+  .profile-details {
+    padding: 0 18px 14px 18px;
+  }
+  
+  .profile-stats {
+    padding: 14px 18px;
+  }
+  
+  .social-profiles {
+    padding: 14px 18px;
+  }
+  
+  .profile-divider {
+    margin: 0 18px;
+  }
+}
+
 @media (max-width: 768px) {
+  .user-profile-card {
+    position: relative;
+    top: auto;
+    margin-bottom: 20px;
+  }
+  
   .profile-header {
     padding: 15px;
+    flex-direction: row;
+    text-align: left;
+  }
+  
+  .profile-avatar {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .profile-name {
+    font-size: 16px;
+  }
+  
+  .profile-friends {
+    font-size: 13px;
   }
   
   .profile-details {
@@ -291,5 +357,102 @@
   
   .profile-divider {
     margin: 0 15px;
+  }
+  
+  .detail-item {
+    font-size: 14px;
+  }
+  
+  .stat-label,
+  .stat-value {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile-card {
+    margin-bottom: 15px;
+    border-radius: 6px;
+  }
+  
+  .profile-header {
+    padding: 12px;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .profile-name {
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+  
+  .profile-friends {
+    font-size: 12px;
+  }
+  
+  .profile-details {
+    padding: 0 12px 12px 12px;
+    gap: 8px;
+  }
+  
+  .detail-item {
+    font-size: 13px;
+    gap: 8px;
+  }
+  
+  .profile-stats {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .stat-value {
+    font-size: 13px;
+  }
+  
+  .social-profiles {
+    padding: 12px;
+  }
+  
+  .social-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .social-item {
+    padding: 8px 0;
+  }
+  
+  .social-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .social-name {
+    font-size: 12px;
+  }
+  
+  .social-platform {
+    font-size: 10px;
+  }
+  
+  .profile-divider {
+    margin: 0 12px;
   }
 }

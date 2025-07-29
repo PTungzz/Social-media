@@ -1,111 +1,137 @@
 import React, { useState, useEffect } from 'react';
-import './UserProfile.css';
+import { useParams, useNavigate } from 'react-router-dom';
 import UserProfileCard from './UserProfileCard';
-import { getPosts } from '../utils/localStorage';
-import { authAPI } from '../services/api';
+import { authAPI, postsAPI } from '../services/api';
+import './UserProfile.css';
 
-const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
-  const [user, setUser] = useState(null);
+const UserProfile = () => {
+  const { userId } = useParams();
+  const navigate = useNavigate();
+  
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
+  };
+  
+  const currentUser = getCurrentUser();
+  const [userInfo, setUserInfo] = useState(null);
   const [userPosts, setUserPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isDarkMode] = useState(
+    document.body.classList.contains('dark-mode')
+  );
+
+  const handleGoBack = () => {
+    navigate(-1); // Quay lại trang trước
+  };
 
   useEffect(() => {
-    const loadUserData = async () => {
+    const fetchUserData = async () => {
       try {
-        // Get user data from API
-        const response = await authAPI.getUserById(userId);
+        setLoading(true);
+        setError('');
         
-        if (response.data.success) {
-          setUser(response.data.user);
-          
-          // Get user's posts from localStorage (posts vẫn lưu trong localStorage)
-          const allPosts = getPosts();
-          const filteredPosts = allPosts.filter(post => post.author?.id === userId);
-          setUserPosts(filteredPosts);
+        console.log('🔍 Fetching user data for userId:', userId);
+        
+        // Fetch user info
+        const userResponse = await authAPI.getUserById(userId);
+        console.log('👤 User response:', userResponse.data);
+        if (userResponse.data && userResponse.data.success) {
+          setUserInfo(userResponse.data.user);
         }
-        
-        setLoading(false);
+
+        // Fetch user posts
+        const postsResponse = await postsAPI.getUserPosts(userId);
+        console.log('📝 Posts response:', postsResponse.data);
+        if (postsResponse.data && postsResponse.data.success) {
+          setUserPosts(postsResponse.data.posts);
+        }
+
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('❌ Error fetching user data:', error);
+        setError('Không thể tải thông tin người dùng');
+      } finally {
         setLoading(false);
       }
     };
 
     if (userId) {
-      loadUserData();
+      fetchUserData();
     }
   }, [userId]);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   if (loading) {
     return (
-      <div className={`user-profile-page ${isDarkMode ? 'dark-mode' : ''}`}>
-        <div className="loading">Loading...</div>
+      <div className={`user-profile ${isDarkMode ? 'dark-mode' : ''}`}>
+        <div className="loading">
+          <div className="loading-spinner"></div>
+          <p>Đang tải thông tin người dùng...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (error) {
     return (
-      <div className={`user-profile-page ${isDarkMode ? 'dark-mode' : ''}`}>
-        <div className="error">User not found</div>
+      <div className={`user-profile ${isDarkMode ? 'dark-mode' : ''}`}>
+        <div className="error">{error}</div>
+        <button onClick={handleGoBack} className="back-btn">Quay lại</button>
       </div>
     );
   }
 
   return (
-    <div className={`user-profile-page ${isDarkMode ? 'dark-mode' : ''}`}>
-      {/* Header */}
-      <div className="profile-header">
-        <button className="back-button" onClick={onBack}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Back
+    <div className={`user-profile ${isDarkMode ? 'dark-mode' : ''}`}>
+      <div className="user-profile-header">
+        <button onClick={handleGoBack} className="back-btn">
+          ← Quay lại
         </button>
-        <h1 className="profile-title">
-          {user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.name || 'User Profile'}
-        </h1>
+        <h2>Trang cá nhân</h2>
       </div>
 
-      {/* Main Content */}
-      <div className="profile-content">
-        {/* Left Sidebar - Profile Card */}
-        <div className="profile-sidebar">
-          <UserProfileCard user={user} />
+      <div className="user-profile-content">
+        {/* UserProfileCard - 1/3 width */}
+        <div className="user-profile-sidebar">
+          <UserProfileCard 
+            user={userInfo} 
+            postsCount={userPosts.length}
+            isDarkMode={isDarkMode}
+            isOwnProfile={currentUser?.id === userId}
+          />
         </div>
 
-        {/* Right Content - Posts */}
-        <div className="profile-main">
-          <div className="posts-section">
-            <h2 className="posts-title">
-              Posts by {user.firstName && user.lastName 
-                ? `${user.firstName} ${user.lastName}` 
-                : user.name || 'User'}
-            </h2>
-            
-            {userPosts.length > 0 ? (
+        {/* User Posts - 2/3 width */}
+        <div className="user-posts-section">
+          <div className="posts-header">
+            <h3>Bài viết của {userInfo?.firstName} {userInfo?.lastName}</h3>
+            <span className="posts-count">({userPosts.length} bài viết)</span>
+          </div>
+
+          <div className="posts-container">
+            {userPosts.length === 0 ? (
+              <div className="no-posts">
+                <div className="no-posts-icon">📝</div>
+                <p>Người dùng này chưa có bài viết nào.</p>
+              </div>
+            ) : (
               <div className="posts-list">
-                {userPosts.map((post) => (
-                  <div key={post.id} className="post-container">
+                {userPosts.map((post, index) => (
+                  <div key={index} className="post-container">
                     <div className="post-item">
                       <div className="post-header">
                         <div className="post-author">
                           <div className="author-avatar">
-                            {user.avatar ? (
+                            {post.author?.avatar ? (
                               <img 
-                                src={user.avatar} 
-                                alt={user.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
+                                src={post.author.avatar} 
+                                alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'flex';
@@ -114,104 +140,165 @@ const UserProfile = ({ userId, currentUser, onBack, isDarkMode }) => {
                             ) : (
                               <img 
                                 src="/api/placeholder/32/32" 
-                                alt={user.firstName ? `${user.firstName} ${user.lastName}` : 'User'}
+                                alt={post.author?.firstName ? `${post.author.firstName} ${post.author.lastName}` : 'User'}
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'flex';
                                 }}
                               />
                             )}
-                            <div className="avatar-fallback" style={{ display: user.avatar ? 'none' : 'flex' }}>
-                              {user.firstName && user.lastName 
-                                ? `${user.firstName[0]}${user.lastName[0]}` 
-                                : user.name && typeof user.name === 'string' ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+                            <div className="avatar-fallback" style={{ display: post.author?.avatar ? 'none' : 'flex' }}>
+                              {post.author?.firstName && post.author?.lastName 
+                                ? `${post.author.firstName[0]}${post.author.lastName[0]}` 
+                                : post.author?.name && typeof post.author.name === 'string' ? post.author.name.split(' ').map(n => n[0]).join('') : 'U'}
                             </div>
                           </div>
                           <div className="author-info">
-                            <strong>
-                              {user.firstName && user.lastName 
-                                ? `${user.firstName} ${user.lastName}` 
-                                : user.name || 'Unknown User'}
+                            <strong className="author-name-clickable">
+                              {post.author?.firstName && post.author?.lastName 
+                                ? `${post.author.firstName} ${post.author.lastName}` 
+                                : post.author?.name || 'Unknown User'}
                             </strong>
-                            <small>{formatDate(post.timestamp)}</small>
+                            <small>{post.createdAt ? new Date(post.createdAt).toLocaleString() : 'Just now'}</small>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="post-content">
-                        <p>{post.content}</p>
-                      </div>
+                      {post.content && (
+                        <div className="post-content">
+                          <p>{post.content}</p>
+                        </div>
+                      )}
                       
-                      {/* Post Attachments */}
-                      {post.attachments && post.attachments.length > 0 && (
+                      {post.image && (
                         <div className="post-attachments">
-                          {post.attachments.map((attachment, attachIndex) => (
-                            <div key={attachIndex} className="post-attachment">
-                              {attachment.type === 'image' && attachment.preview && (
-                                <div 
-                                  className="attachment-image"
-                                  onClick={() => window.open(attachment.preview, '_blank')}
-                                  title="Click to view full size"
-                                >
-                                  <img src={attachment.preview} alt={attachment.name} />
-                                </div>
-                              )}
-                              {attachment.type !== 'image' && (
-                                <div className="attachment-file">
-                                  <div className="attachment-icon">
-                                    {attachment.type === 'video' && (
-                                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                      </svg>
-                                    )}
-                                    {attachment.type === 'audio' && (
-                                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                        <line x1="12" y1="19" x2="12" y2="23"></line>
-                                        <line x1="8" y1="23" x2="16" y2="23"></line>
-                                      </svg>
-                                    )}
-                                    {attachment.type === 'file' && (
-                                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <div className="attachment-info">
-                                    <div className="attachment-name">{attachment.name}</div>
-                                    <div className="attachment-size">{attachment.size}</div>
-                                  </div>
-                                </div>
-                              )}
+                          <div className="post-attachment">
+                            <div 
+                              className="attachment-image"
+                              onClick={() => window.open(`http://localhost:5001${post.image}`, '_blank')}
+                              title="Click to view full size"
+                            >
+                              <img src={`http://localhost:5001${post.image}`} alt="Post attachment" />
                             </div>
-                          ))}
+                          </div>
                         </div>
                       )}
                       
                       {/* Post Actions */}
                       <div className="post-actions">
-                        <button className="action-button">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <button className="action-btn like-btn">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                           </svg>
-                          {post.likes || 0}
+                          Like {post.likes?.length > 0 && `(${post.likes.length})`}
                         </button>
-                        <button className="action-button">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <button className="action-btn comment-btn">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                           </svg>
-                          {post.comments ? post.comments.length : 0}
+                          Comment {post.comments?.length > 0 && `(${post.comments.length})`}
+                        </button>
+                        <button className="action-btn share-btn">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                          </svg>
+                          Share
                         </button>
                       </div>
+
+                      {/* Comments List */}
+                      {post.comments && post.comments.length > 0 && (
+                        <div className="comments-list">
+                          {post.comments.slice(0, 3).map((comment, commentIndex) => (
+                            <div key={comment._id || comment.id || `comment-${commentIndex}`} className="comment-item">
+                              <div className="comment-author">
+                                <div className="comment-avatar">
+                                  <img 
+                                    src={comment.author?.avatar || "/api/placeholder/24/24"} 
+                                    alt={comment.author?.firstName ? `${comment.author.firstName} ${comment.author.lastName}` : comment.author?.username || 'User'}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className="avatar-fallback">
+                                    {comment.author?.firstName && comment.author?.lastName 
+                                      ? `${comment.author.firstName[0]}${comment.author.lastName[0]}` 
+                                      : comment.author?.username ? comment.author.username[0].toUpperCase() : 'U'}
+                                  </div>
+                                </div>
+                                <div className="comment-content">
+                                  <div className="comment-bubble">
+                                    <strong>
+                                      {comment.author?.firstName && comment.author?.lastName 
+                                        ? `${comment.author.firstName} ${comment.author.lastName}` 
+                                        : comment.author?.username || 'Unknown User'}
+                                    </strong>
+                                    <p>{comment.content || comment.text}</p>
+                                  </div>
+                                  
+                                  <div className="comment-meta">
+                                    <small>{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : 'Just now'}</small>
+                                    {comment.likes && comment.likes.length > 0 && (
+                                      <span className="comment-likes">❤️ {comment.likes.length}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Display replies if any */}
+                                  {comment.replies && comment.replies.length > 0 && (
+                                    <div className="replies-container">
+                                      {comment.replies.map((reply, replyIndex) => (
+                                        <div key={reply._id || reply.id || `reply-${replyIndex}`} className="reply-item">
+                                          <div className="reply-author">
+                                            <div className="reply-avatar">
+                                              <img 
+                                                src={reply.author?.avatar || "/api/placeholder/20/20"} 
+                                                alt={reply.author?.firstName ? `${reply.author.firstName} ${reply.author.lastName}` : reply.author?.username || 'User'}
+                                                onError={(e) => {
+                                                  e.target.style.display = 'none';
+                                                  e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                              />
+                                              <div className="avatar-fallback">
+                                                {reply.author?.firstName && reply.author?.lastName 
+                                                  ? `${reply.author.firstName[0]}${reply.author.lastName[0]}` 
+                                                  : reply.author?.username ? reply.author.username[0].toUpperCase() : 'U'}
+                                              </div>
+                                            </div>
+                                            <div className="reply-content">
+                                              <div className="reply-bubble">
+                                                <strong>
+                                                  {reply.author?.firstName && reply.author?.lastName 
+                                                    ? `${reply.author.firstName} ${reply.author.lastName}` 
+                                                    : reply.author?.username || 'Unknown User'}
+                                                </strong>
+                                                <p>{reply.text}</p>
+                                              </div>
+                                              <small>{reply.createdAt ? new Date(reply.createdAt).toLocaleString() : 'Just now'}</small>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {post.comments.length > 3 && (
+                            <div className="more-comments">
+                              <span>Xem thêm {post.comments.length - 3} bình luận khác...</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
-              </div>
-            ) : (
-              <div className="no-posts">
-                <p>No posts yet.</p>
               </div>
             )}
           </div>
